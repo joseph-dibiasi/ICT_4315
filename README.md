@@ -1,2 +1,6 @@
-# ICT_4315
-Repository for the Object-Oriented Programming II class.
+# ICT4315 Object Oriented Programming
+
+## Contributors
+
+* Joseph DiBiasi
+* Nathan Braun

@@ -20,11 +20,11 @@ public class ParkingService {
         commandMap.put(command.getCommandName(), command);
     }
 
-    public String performCommand(String name, String[] params) {
-        Command command = commandMap.get(name);
+    public String performCommand(String commandName, String[] params) {
+        Command command = commandMap.get(commandName);
 
         if (command == null) {
-            return "Unknown command: " + name;
+            return "Unknown command: " + commandName;
         }
 
         try {

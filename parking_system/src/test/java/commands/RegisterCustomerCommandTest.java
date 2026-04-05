@@ -1,0 +1,120 @@
+package commands;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import java.util.Properties;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import models.Address;
+import models.Customer;
+import models.ParkingOffice;
+
+class RegisterCustomerCommandTest {
+
+    private RegisterCustomerCommand command;
+    private ParkingOffice mockParkingOffice;
+    private Properties validParams;
+    private Address testAddress;
+
+    @BeforeEach
+    void setUp() {
+        mockParkingOffice = mock(ParkingOffice.class);
+        command = new RegisterCustomerCommand(mockParkingOffice);
+        
+        testAddress = new Address();
+        testAddress.setStreetAddress1("123 Main St");
+        testAddress.setCity("Test City");
+        testAddress.setState("TS");
+        testAddress.setZipCode("12345");
+        
+        validParams = new Properties();
+        validParams.setProperty("name", "John Doe");
+        validParams.put("address", testAddress);
+        validParams.setProperty("phoneNumber", "555-1234");
+    }
+
+    @Test
+    void testGetCommandName() {
+        assertEquals("registerCustomer", command.getCommandName());
+    }
+
+    @Test
+    void testGetDisplayName() {
+        assertEquals("Register Customer", command.getDisplayName());
+    }
+
+    @Test
+    void testCheckParametersValid() {
+        assertDoesNotThrow(() -> command.checkParameters(validParams));
+    }
+
+    @Test
+    void testCheckParametersMissingName() {
+        Properties params = new Properties();
+        params.put("address", testAddress);
+        params.setProperty("phoneNumber", "555-1234");
+        
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, 
+            () -> command.checkParameters(params));
+        assertEquals("Missing required parameter: name", exception.getMessage());
+    }
+
+    @Test
+    void testCheckParametersBlankName() {
+        Properties params = new Properties();
+        params.setProperty("name", "");
+        params.put("address", testAddress);
+        params.setProperty("phoneNumber", "555-1234");
+        
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, 
+            () -> command.checkParameters(params));
+        assertEquals("Missing required parameter: name", exception.getMessage());
+    }
+
+    @Test
+    void testCheckParametersMissingAddress() {
+        Properties params = new Properties();
+        params.setProperty("name", "John Doe");
+        params.setProperty("phoneNumber", "555-1234");
+        
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, 
+            () -> command.checkParameters(params));
+        assertEquals("Missing required parameter: address", exception.getMessage());
+    }
+
+    @Test
+    void testCheckParametersMissingPhone() {
+        Properties params = new Properties();
+        params.setProperty("name", "John Doe");
+        params.put("address", testAddress);
+        
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, 
+            () -> command.checkParameters(params));
+        assertEquals("Missing required parameter: phoneNumber", exception.getMessage());
+    }
+
+    @Test
+    void testCheckParametersBlankPhone() {
+        Properties params = new Properties();
+        params.setProperty("name", "John Doe");
+        params.put("address", testAddress);
+        params.setProperty("phoneNumber", "");
+        
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, 
+            () -> command.checkParameters(params));
+        assertEquals("Missing required parameter: phoneNumber", exception.getMessage());
+    }
+
+    @Test
+    void testExecuteValidParameters() {
+        String result = command.execute(validParams);
+        
+        assertEquals("Customer registered successfully", result);
+        
+        // Verify that parkingOffice.register was called with a customer having the correct data
+        verify(mockParkingOffice, times(1)).register(any(Customer.class));
+    }
+}

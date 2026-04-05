@@ -1,0 +1,25 @@
+# Compiled Java files
+
+*.class
+
+# Build output
+
+/bin/
+/parking_system/target/
+/build/
+/out/
+
+# Eclipse files
+
+.project
+.classpath
+.settings/
+
+# Logs
+
+*.log
+
+# OS files
+
+.DS_Store
+Thumbs.db

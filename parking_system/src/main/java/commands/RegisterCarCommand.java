@@ -1,6 +1,5 @@
 package commands;
 
-import java.util.Properties;
 import java.util.UUID;
 
 import models.Car;
@@ -8,13 +7,8 @@ import models.CarType;
 import models.ParkingOffice;
 
 public class RegisterCarCommand implements Command {
-	
-    private ParkingOffice parkingOffice;
     
-    // Command-specific parameter keys
-    private static final String PARAM_OWNER_ID = "ownerId";
-    private static final String PARAM_LICENSE = "license";
-    private static final String PARAM_CAR_TYPE = "carType";
+    private ParkingOffice parkingOffice;
 
     public RegisterCarCommand(ParkingOffice parkingOffice) {
         this.parkingOffice = parkingOffice;
@@ -31,32 +25,45 @@ public class RegisterCarCommand implements Command {
     }
     
     @Override
-    public void checkParameters(Properties params) throws IllegalArgumentException {
-    	 if (!params.containsKey(PARAM_OWNER_ID)) {
-    	 	throw new IllegalArgumentException("Missing required parameter: ownerId");
-    	 }
-    	 if (!params.containsKey(PARAM_LICENSE) || params.getProperty(PARAM_LICENSE).isBlank()) {
-    	 	throw new IllegalArgumentException("Missing required parameter: license");
-    	 }
-    	 if (!params.containsKey(PARAM_CAR_TYPE)) {
-    	 	throw new IllegalArgumentException("Missing required parameter: carType");
-    	 }
+    public void checkParameters(String[] params) throws IllegalArgumentException {
+        if (params == null || params.length < 3) {
+            throw new IllegalArgumentException("Missing required parameter: ownerId, license, or carType");
+        }
+        if (params[0] == null || params[0].isBlank()) {
+            throw new IllegalArgumentException("Missing required parameter: ownerId");
+        }
+        if (params[1] == null || params[1].isBlank()) {
+            throw new IllegalArgumentException("Missing required parameter: license");
+        }
+        if (params[2] == null || params[2].isBlank()) {
+            throw new IllegalArgumentException("Missing required parameter: carType");
+        }
     }
 
-	@Override
-	public String execute(Properties params) {
-		UUID ownerId = (UUID) params.get(PARAM_OWNER_ID);
-		String license = params.getProperty(PARAM_LICENSE);
-		CarType carType = (CarType) params.get(PARAM_CAR_TYPE);
-		
-		Car car = new Car();
-		car.setOwner(ownerId);
-		car.setLicense(license);
-		car.setType(carType);
-		
-		this.parkingOffice.register(car);
-		
-		return "Car registered successfully";
-	}
+    @Override
+    public String execute(String[] params) {
+        UUID ownerId;
+        try {
+            ownerId = UUID.fromString(params[0]);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid ownerId format");
+        }
 
+        String license = params[1];
+        CarType carType;
+        try {
+            carType = CarType.valueOf(params[2].toUpperCase());
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid carType");
+        }
+        
+        Car car = new Car();
+        car.setOwner(ownerId);
+        car.setLicense(license);
+        car.setType(carType);
+        
+        this.parkingOffice.register(car);
+        
+        return "Car registered successfully";
+    }
 }

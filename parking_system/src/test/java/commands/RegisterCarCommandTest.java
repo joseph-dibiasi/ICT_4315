@@ -3,7 +3,6 @@ package commands;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import java.util.Properties;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -17,7 +16,7 @@ class RegisterCarCommandTest {
 
     private RegisterCarCommand command;
     private ParkingOffice mockParkingOffice;
-    private Properties validParams;
+    private String[] validParams;
     private UUID testOwnerId;
 
     @BeforeEach
@@ -27,10 +26,7 @@ class RegisterCarCommandTest {
         
         testOwnerId = UUID.randomUUID();
         
-        validParams = new Properties();
-        validParams.put("ownerId", testOwnerId);
-        validParams.setProperty("license", "ABC-123");
-        validParams.put("carType", CarType.COMPACT);
+        validParams = new String[] {testOwnerId.toString(), "ABC-123", CarType.COMPACT.name()};
     }
 
     @Test
@@ -50,9 +46,7 @@ class RegisterCarCommandTest {
 
     @Test
     void testCheckParametersMissingOwnerId() {
-        Properties params = new Properties();
-        params.setProperty("license", "ABC-123");
-        params.put("carType", CarType.COMPACT);
+        String[] params = new String[] {"", "ABC-123", CarType.COMPACT.name()};
         
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, 
             () -> command.checkParameters(params));
@@ -61,9 +55,7 @@ class RegisterCarCommandTest {
 
     @Test
     void testCheckParametersMissingLicense() {
-        Properties params = new Properties();
-        params.put("ownerId", testOwnerId);
-        params.put("carType", CarType.COMPACT);
+        String[] params = new String[] {testOwnerId.toString(), "", CarType.COMPACT.name()};
         
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, 
             () -> command.checkParameters(params));
@@ -72,10 +64,7 @@ class RegisterCarCommandTest {
 
     @Test
     void testCheckParametersBlankLicense() {
-        Properties params = new Properties();
-        params.put("ownerId", testOwnerId);
-        params.setProperty("license", "");
-        params.put("carType", CarType.COMPACT);
+        String[] params = new String[] {testOwnerId.toString(), "", CarType.COMPACT.name()};
         
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, 
             () -> command.checkParameters(params));
@@ -84,13 +73,43 @@ class RegisterCarCommandTest {
 
     @Test
     void testCheckParametersMissingCarType() {
-        Properties params = new Properties();
-        params.put("ownerId", testOwnerId);
-        params.setProperty("license", "ABC-123");
+        String[] params = new String[] {testOwnerId.toString(), "ABC-123", ""};
         
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, 
             () -> command.checkParameters(params));
         assertEquals("Missing required parameter: carType", exception.getMessage());
+    }
+
+    @Test
+    void testCheckParametersNullParams() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, 
+            () -> command.checkParameters(null));
+        assertEquals("Missing required parameter: ownerId, license, or carType", exception.getMessage());
+    }
+
+    @Test
+    void testCheckParametersInsufficientParams() {
+        String[] params = new String[] {testOwnerId.toString(), "ABC-123"};
+        
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, 
+            () -> command.checkParameters(params));
+        assertEquals("Missing required parameter: ownerId, license, or carType", exception.getMessage());
+    }
+
+    @Test
+    void testExecuteInvalidOwnerIdFormat() {
+        String[] params = new String[] {"not-a-uuid", "ABC-123", CarType.SUV.name()};
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+            () -> command.execute(params));
+        assertEquals("Invalid ownerId format", exception.getMessage());
+    }
+
+    @Test
+    void testExecuteInvalidCarType() {
+        String[] params = new String[] {testOwnerId.toString(), "ABC-123", "invalidType"};
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+            () -> command.execute(params));
+        assertEquals("Invalid carType", exception.getMessage());
     }
 
     @Test

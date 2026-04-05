@@ -1,21 +1,14 @@
 package commands;
 
-import java.util.Properties;
-
 import models.Address;
 import models.Customer;
 import models.ParkingOffice;
 
 public class RegisterCustomerCommand implements Command {
 
-	private ParkingOffice parkingOffice;
-	
-	// Command-specific parameter keys
-	private static final String PARAM_NAME = "name";
-	private static final String PARAM_ADDRESS = "address";
-	private static final String PARAM_PHONE = "phoneNumber";
+    private ParkingOffice parkingOffice;
 
-	public RegisterCustomerCommand(ParkingOffice parkingOffice) {
+    public RegisterCustomerCommand(ParkingOffice parkingOffice) {
         this.parkingOffice = parkingOffice;
     }
 
@@ -28,35 +21,40 @@ public class RegisterCustomerCommand implements Command {
     public String getDisplayName() {
         return "Register Customer";
     }
-	
-	@Override
-	public void checkParameters(Properties params) throws IllegalArgumentException {
-		if (!params.containsKey(PARAM_NAME) || params.getProperty(PARAM_NAME).isBlank()) {
-			throw new IllegalArgumentException("Missing required parameter: name");
-		}
-		if (!params.containsKey(PARAM_ADDRESS)) {
-			throw new IllegalArgumentException("Missing required parameter: address");
-		}
-		if (!params.containsKey(PARAM_PHONE) || params.getProperty(PARAM_PHONE).isBlank()) {
-			throw new IllegalArgumentException("Missing required parameter: phoneNumber");
-		}
-	}
 
-	@Override
-	public String execute(Properties params) {
-		String name = params.getProperty(PARAM_NAME);
-		Address address = (Address) params.get(PARAM_ADDRESS);
-		String phoneNumber = params.getProperty(PARAM_PHONE);
-        
-		Customer customer = new Customer();
-		customer.setName(name);
-		customer.setAddress(address);
-		customer.setPhoneNumber(phoneNumber);
-		
-		this.parkingOffice.register(customer);
-        
-		return "Customer registered successfully";
-	}
+    @Override
+    public void checkParameters(String[] params) throws IllegalArgumentException {
+        if (params == null || params.length < 3) {
+            throw new IllegalArgumentException("Missing required parameter: name, address, or phoneNumber");
+        }
+        if (params[0] == null || params[0].isBlank()) {
+            throw new IllegalArgumentException("Missing required parameter: name");
+        }
+        if (params[1] == null || params[1].isBlank()) {
+            throw new IllegalArgumentException("Missing required parameter: address");
+        }
+        if (params[2] == null || params[2].isBlank()) {
+            throw new IllegalArgumentException("Missing required parameter: phoneNumber");
+        }
+    }
 
+    @Override
+    public String execute(String[] params) {
+        String name = params[0];
+        String addressText = params[1];
+        String phoneNumber = params[2];
+
+        Address address = new Address();
+        address.setStreetAddress1(addressText);
+
+        Customer customer = new Customer();
+        customer.setName(name);
+        customer.setAddress(address);
+        customer.setPhoneNumber(phoneNumber);
+
+        this.parkingOffice.register(customer);
+
+        return "Customer registered successfully";
+    }
 
 }

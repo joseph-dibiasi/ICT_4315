@@ -37,19 +37,30 @@ public class ParkingOffice {
 		this.address = address;
 		this.customers = new ArrayList<>();
 		this.lots = new ArrayList<>();
-		this.permitManager = permitManager != null ? permitManager : new PermitManager();
-		this.transactionManager = transactionManager != null ? transactionManager : new TransactionManager();
+		this.permitManager = new PermitManager();
+		this.transactionManager = new TransactionManager();
 	}
 
 	public void register(Customer customer) {
 		permitManager.register(customer.getName(), customer.getAddress(), customer.getPhoneNumber());
 	}
 
-	public Customer register(Car car) {
-		return permitManager.register(getCustomer(car.getOwner()), car.getLicense(), car.getType());
+	public Car register(Car car) {
+		Customer customer = getCustomer(car.getOwner());
+		if (customer == null) {
+			throw new IllegalArgumentException("Unknown car owner: " + car.getOwner());
+		}
+		Car registeredCar = permitManager.registerCar(customer.getCustomerId(), customer.getName(), car.getLicense(),
+				car.getType());
+		customer.getCars().add(registeredCar);
+		return registeredCar;
 	}
 
 	public ParkingCharge park(LocalDateTime date, ParkingLot lot, Car car) {
+		Customer customer = getCustomer(car.getOwner());
+		if (customer == null) {
+			throw new IllegalArgumentException("Unknown car owner: " + car.getOwner());
+		}
 		return transactionManager.park(date, lot, car);
 	}
 

@@ -110,4 +110,107 @@ class AddressTest {
         a1.setCity("CityX");
         assertEquals(a1, a1);
     }
+
+    @Test
+    void testNotEqualsDifferentStreetAddress1() {
+        Address a1 = new Address();
+        a1.setStreetAddress1("123 Main St");
+        a1.setCity("City");
+
+        Address a2 = new Address();
+        a2.setStreetAddress1("456 Main St");
+        a2.setCity("City");
+
+        assertNotEquals(a1, a2);
+    }
+
+    @Test
+    void testNotEqualsDifferentStreetAddress2() {
+        Address a1 = new Address();
+        a1.setStreetAddress2("Apt 1");
+        a1.setCity("City");
+
+        Address a2 = new Address();
+        a2.setStreetAddress2("Apt 2");
+        a2.setCity("City");
+
+        assertNotEquals(a1, a2);
+    }
+
+    @Test
+    void testNotEqualsDifferentCity() {
+        Address a1 = new Address();
+        a1.setCity("City1");
+
+        Address a2 = new Address();
+        a2.setCity("City2");
+
+        assertNotEquals(a1, a2);
+    }
+
+    @Test
+    void testNotEqualsDifferentState() {
+        Address a1 = new Address();
+        a1.setState("IL");
+
+        Address a2 = new Address();
+        a2.setState("CA");
+
+        assertNotEquals(a1, a2);
+    }
+
+    @Test
+    void testNotEqualsDifferentZipCode() {
+        Address a1 = new Address();
+        a1.setZipCode("12345");
+
+        Address a2 = new Address();
+        a2.setZipCode("67890");
+
+        assertNotEquals(a1, a2);
+    }
+
+    @Test
+    void testNotEqualsNullCity() {
+        Address a1 = new Address();
+        a1.setCity("City");
+
+        Address a2 = new Address();
+        // city null
+
+        assertNotEquals(a1, a2);
+    }
+
+    @Test
+    void testNotEqualsNullCityReversed() {
+        Address a1 = new Address();
+        // city null
+
+        Address a2 = new Address();
+        a2.setCity("City");
+
+        assertNotEquals(a1, a2);
+    }
+
+    @Test
+    void testNotEqualsNullState() {
+        Address a1 = new Address();
+        a1.setState("IL");
+
+        Address a2 = new Address();
+        // state null
+
+        assertNotEquals(a1, a2);
+    }
+
+    @Test
+    void testNotEqualsNullStateReversed() {
+        Address a1 = new Address();
+        // state null
+
+        Address a2 = new Address();
+        a2.setState("IL");
+
+        assertNotEquals(a1, a2);
+    }
 }

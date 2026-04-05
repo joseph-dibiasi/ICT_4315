@@ -138,4 +138,55 @@ class ParkingLotTest {
 
         assertNotEquals(lot1, lot2);
     }
+
+    @Test
+    void testNotEqualsNullAddress() {
+        ParkingLot lot1 = new ParkingLot();
+        lot1.setAddress(new Address());
+
+        ParkingLot lot2 = new ParkingLot();
+        // address remains null
+
+        assertNotEquals(lot1, lot2);
+    }
+
+    @Test
+    void testNotEqualsNullAddressReversed() {
+        ParkingLot lot1 = new ParkingLot();
+        // address null
+
+        ParkingLot lot2 = new ParkingLot();
+        lot2.setAddress(new Address());
+
+        assertNotEquals(lot1, lot2);
+    }
+
+    @Test
+    void testNotEqualsNullLotId() {
+        ParkingLot lot1 = new ParkingLot();
+        lot1.setLotId(UUID.randomUUID());
+
+        ParkingLot lot2 = new ParkingLot();
+        // lotId remains null
+
+        assertNotEquals(lot1, lot2);
+    }
+
+    @Test
+    void testNotEqualsNullLotFee() {
+        ParkingLot lot1 = new ParkingLot();
+        lot1.setLotFee(new Money(100L));
+
+        ParkingLot lot2 = new ParkingLot();
+        // lotFee remains null
+
+        assertNotEquals(lot1, lot2);
+    }
+    
+    @Test
+    public void testEqualsSameObject() {
+        ParkingLot lot = new ParkingLot();
+        assertTrue(lot.equals(lot));
+    }
+
 }

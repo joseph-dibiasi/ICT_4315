@@ -14,6 +14,10 @@ import java.util.UUID;
  */
 public class TransactionManager {
     private List<ParkingCharge> charges;   
+
+    public TransactionManager() {
+        this.charges = new ArrayList<>();
+    }
     
 	/*
 	 * This method is responsible for creating the entry ParkingFee object for each
@@ -82,6 +86,7 @@ public class TransactionManager {
 				lot.getParkedCars().remove(car);
 			} else {
 				charge = new ParkingCharge();
+				lot.getParkedCars().remove(car);
 			}
 		return charge;
 	}

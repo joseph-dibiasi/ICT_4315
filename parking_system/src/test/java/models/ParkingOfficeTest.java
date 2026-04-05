@@ -5,14 +5,26 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import models.Address;
+import models.Car;
+import models.CarType;
 import models.Customer;
+import models.Money;
+import models.ParkingCharge;
+import models.ParkingLot;
 import models.ParkingOffice;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class ParkingOfficeTest {
 
@@ -144,6 +156,28 @@ class ParkingOfficeTest {
     }
 
     @Test
+    void testConstructorWithManagers() {
+        PermitManager pm = new PermitManager();
+        TransactionManager tm = new TransactionManager();
+        ParkingOffice office = new ParkingOffice(pm, tm);
+        assertNotNull(office.getCustomers());
+        assertNotNull(office.getLots());
+        assertTrue(office.getCustomers().isEmpty());
+        assertTrue(office.getLots().isEmpty());
+    }
+
+    @Test
+    void testConstructorWithManagersNull() {
+    	TransactionManager tm = null;
+    	PermitManager pm = null;
+        ParkingOffice office = new ParkingOffice(pm, tm);
+        assertNotNull(office.getCustomers());
+        assertNotNull(office.getLots());
+        assertTrue(office.getCustomers().isEmpty());
+        assertTrue(office.getLots().isEmpty());
+    }
+
+    @Test
     void testRegisterCarDelegatesToPermitManagerAndReturnsCar() {
         Customer customer = new Customer();
         UUID customerId = UUID.randomUUID();
@@ -160,7 +194,7 @@ class ParkingOfficeTest {
         car.setLicense("ABC-123");
         car.setType(CarType.COMPACT);
 
-        Customer result = parkingOffice.register(car);
+        Car result = parkingOffice.register(car);
         assertNotNull(result);
         assertEquals(customerId, result.getOwner());
         assertEquals(1, customer.getCars().size());
@@ -177,4 +211,303 @@ class ParkingOfficeTest {
         assertTrue(office.getCustomers().isEmpty());
         assertTrue(office.getLots().isEmpty());
     }
+
+    @Test
+    void testParkDelegatesToTransactionManager() {
+        Customer customer = new Customer();
+        UUID customerId = UUID.randomUUID();
+        customer.setCustomerId(customerId);
+        customer.setName("Alice");
+        customer.setAddress(createTestAddress());
+        customer.setPhoneNumber("555-1234");
+        List<Car> cars = new ArrayList<>();
+        customer.setCars(cars);
+        parkingOffice.setCustomers(List.of(customer));
+
+        Car car = new Car();
+        car.setOwner(customerId);
+        car.setLicense("ABC-123");
+        car.setType(CarType.COMPACT);
+        car.setPermit("Alice");
+        car.setPermitExpiration(LocalDateTime.now().toLocalDate().plusDays(10));
+
+        ParkingLot lot = new ParkingLot();
+        lot.setLotId(UUID.randomUUID());
+        lot.setCapacity(10);
+        lot.setParkedCars(new HashSet<>());
+        lot.setChargeOnExit(false);
+        lot.setLotFee(new Money(200L));
+
+        ParkingCharge charge = parkingOffice.park(LocalDateTime.now(), lot, car);
+        assertNotNull(charge);
+        assertTrue(lot.getParkedCars().contains(car));
+    }
+
+    @Test
+    void testParkThrowsForUnknownCustomer() {
+        Car car = new Car();
+        car.setOwner(UUID.randomUUID());
+        car.setPermit("P");
+
+        ParkingLot lot = new ParkingLot();
+        lot.setLotId(UUID.randomUUID());
+        lot.setCapacity(10);
+        lot.setParkedCars(new HashSet<>());
+        lot.setChargeOnExit(false);
+        lot.setLotFee(new Money(200L));
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () ->
+            parkingOffice.park(LocalDateTime.now(), lot, car)
+        );
+        assertTrue(ex.getMessage().contains("Unknown car owner"));
+    }
+
+    @Test
+    void testLeaveThrowsAndRemovesCar() {
+        ParkingLot lot = new ParkingLot();
+        lot.setLotId(UUID.randomUUID());
+        lot.setCapacity(10);
+        Set<Car> parked = new HashSet<>();
+        lot.setParkedCars(parked);
+        lot.setChargeOnExit(true);
+        lot.setLotFee(new Money(100L));
+
+        Car car = new Car();
+        car.setOwner(UUID.randomUUID());
+        car.setPermit("P");
+        car.setPermitExpiration(LocalDateTime.now().toLocalDate().plusDays(10));
+        lot.getParkedCars().add(car);
+
+        // Since no charge in transactionManager, leave will throw from transactionManager.leave
+        RuntimeException ex = assertThrows(RuntimeException.class, () ->
+            parkingOffice.leave(Instant.now(), lot, car)
+        );
+        assertTrue(ex.getMessage().contains("Failed to Process Parking Exit"));
+        // But car is removed
+        assertFalse(lot.getParkedCars().contains(car));
+    }
+
+    @Test
+    void testUpdateDailyFeesDelegatesToTransactionManager() {
+        ParkingLot lot = new ParkingLot();
+        lot.setLotId(UUID.randomUUID());
+        lot.setCapacity(10);
+        lot.setParkedCars(new HashSet<>());
+        lot.setChargeOnExit(false);
+        lot.setLotFee(new Money(100L));
+
+        parkingOffice.setLots(List.of(lot));
+
+        // No exception expected
+        parkingOffice.updateDailyFees();
+    }
+
+    @Test
+    void testCalculateCustomerMonthlyBillDelegatesToTransactionManager() {
+        Customer customer = new Customer();
+        UUID customerId = UUID.randomUUID();
+        customer.setCustomerId(customerId);
+        customer.setName("Alice");
+        customer.setAddress(createTestAddress());
+        customer.setPhoneNumber("555-1234");
+        Car car = new Car();
+        car.setOwner(customerId);
+        car.setType(CarType.SUV);
+        customer.setCars(List.of(car));
+
+        parkingOffice.setCustomers(List.of(customer));
+
+        // No exception expected
+        parkingOffice.calculateCustomerMonthlyBill();
+    }
+
+    @Test
+    void testEqualsAndHashCode() {
+        ParkingOffice office1 = new ParkingOffice("Name", createTestAddress());
+        ParkingOffice office2 = new ParkingOffice("Name", createTestAddress());
+
+        assertEquals(office1, office2);
+        assertEquals(office1.hashCode(), office2.hashCode());
+    }
+
+    @Test
+    void testNotEqualsDifferentName() {
+        ParkingOffice office1 = new ParkingOffice("Name1", createTestAddress());
+        ParkingOffice office2 = new ParkingOffice("Name2", createTestAddress());
+
+        assertNotEquals(office1, office2);
+    }
+
+    @Test
+    void testNotEqualsDifferentAddress() {
+        ParkingOffice office1 = new ParkingOffice("Name", createTestAddress());
+        Address addr2 = createTestAddress();
+        addr2.setCity("Different");
+        ParkingOffice office2 = new ParkingOffice("Name", addr2);
+
+        assertNotEquals(office1, office2);
+    }
+
+    @Test
+    void testNotEqualsDifferentCustomers() {
+        ParkingOffice office1 = new ParkingOffice("Name", createTestAddress());
+        office1.setCustomers(List.of(new Customer()));
+
+        ParkingOffice office2 = new ParkingOffice("Name", createTestAddress());
+        office2.setCustomers(new ArrayList<>());
+
+        assertNotEquals(office1, office2);
+    }
+
+    @Test
+    void testNotEqualsDifferentLots() {
+        ParkingOffice office1 = new ParkingOffice("Name", createTestAddress());
+        office1.setLots(List.of(new ParkingLot()));
+
+        ParkingOffice office2 = new ParkingOffice("Name", createTestAddress());
+        office2.setLots(new ArrayList<>());
+
+        assertNotEquals(office1, office2);
+    }
+
+    @Test
+    void testNotEqualsNullName() {
+        ParkingOffice office1 = new ParkingOffice("Name", createTestAddress());
+
+        ParkingOffice office2 = new ParkingOffice(null, createTestAddress());
+
+        assertNotEquals(office1, office2);
+    }
+
+    @Test
+    void testNotEqualsNullAddress() {
+        ParkingOffice office1 = new ParkingOffice("Name", createTestAddress());
+
+        ParkingOffice office2 = new ParkingOffice("Name", null);
+
+        assertNotEquals(office1, office2);
+    }
+
+    @Test
+    void testNotEqualsNullCustomers() throws Exception {
+        ParkingOffice office1 = new ParkingOffice("Name", createTestAddress());
+        office1.setCustomers(List.of(new Customer()));
+
+        ParkingOffice office2 = new ParkingOffice("Name", createTestAddress());
+        // set customers to null
+        java.lang.reflect.Field f = office2.getClass().getDeclaredField("customers");
+        f.setAccessible(true);
+        f.set(office2, null);
+
+        assertNotEquals(office1, office2);
+    }
+
+    @Test
+    void testNotEqualsNullCustomersReversed() throws Exception {
+        ParkingOffice office1 = new ParkingOffice("Name", createTestAddress());
+        // set customers to null
+        java.lang.reflect.Field f = office1.getClass().getDeclaredField("customers");
+        f.setAccessible(true);
+        f.set(office1, null);
+
+        ParkingOffice office2 = new ParkingOffice("Name", createTestAddress());
+        office2.setCustomers(List.of(new Customer()));
+
+        assertNotEquals(office1, office2);
+    }
+
+    @Test
+    void testNotEqualsNullLots() throws Exception {
+        ParkingOffice office1 = new ParkingOffice("Name", createTestAddress());
+        office1.setLots(List.of(new ParkingLot()));
+
+        ParkingOffice office2 = new ParkingOffice("Name", createTestAddress());
+        // set lots to null
+        java.lang.reflect.Field f = office2.getClass().getDeclaredField("lots");
+        f.setAccessible(true);
+        f.set(office2, null);
+
+        assertNotEquals(office1, office2);
+    }
+
+    @Test
+    void testNotEqualsNullLotsReversed() throws Exception {
+        ParkingOffice office1 = new ParkingOffice("Name", createTestAddress());
+        // set lots to null
+        java.lang.reflect.Field f = office1.getClass().getDeclaredField("lots");
+        f.setAccessible(true);
+        f.set(office1, null);
+
+        ParkingOffice office2 = new ParkingOffice("Name", createTestAddress());
+        office2.setLots(List.of(new ParkingLot()));
+
+        assertNotEquals(office1, office2);
+    }
+    
+    @Test
+    public void testRegisterCarUnknownCustomerThrows() {
+        ParkingOffice office = new ParkingOffice();
+        Car car = new Car();
+        car.setPermit("ABC123");
+        car.setType(CarType.COMPACT);
+        car.setOwner(UUID.randomUUID());
+        assertThrows(IllegalArgumentException.class, () -> {
+            office.register(car);
+        });
+    }
+    
+    @Test
+    public void testLeaveSuccess() {
+        TransactionManager tm = mock(TransactionManager.class);
+        ParkingCharge charge = new ParkingCharge();
+        when(tm.leave(any(), any(), any())).thenReturn(charge);
+
+        ParkingOffice office = new ParkingOffice(new PermitManager(), tm);
+
+        ParkingLot lot = new ParkingLot();
+        Car car = new Car();
+        car.setPermit("ABC123");
+        car.setType(CarType.COMPACT);
+        car.setOwner(UUID.randomUUID());
+        ParkingCharge result = office.leave(Instant.now(), lot, car);
+
+        assertEquals(charge, result);
+    }
+    
+    @Test
+    public void testGetPermitIdsMultipleCustomers() {
+        ParkingOffice office = new ParkingOffice();
+        
+        Customer c1 = new Customer();
+        c1.setName("Alice");
+        c1.setCustomerId(UUID.randomUUID());
+        c1.setCars(new ArrayList<>());
+        
+        Customer c2 = new Customer();
+        c2.setName("Bob");
+        c2.setCustomerId(UUID.randomUUID());
+        c2.setCars(new ArrayList<>());
+        
+        Car car1 = new Car();
+        car1.setLicense("Car1");
+        car1.setType(CarType.COMPACT);
+        car1.setOwner(c1.getCustomerId());
+        
+        Car car2 = new Car();
+        car2.setLicense("Car2");
+        car2.setType(CarType.SUV);
+        car2.setOwner(c2.getCustomerId());
+
+        c1.getCars().add(car1);
+        c2.getCars().add(car2);
+
+        office.setCustomers(List.of(c1, c2));
+
+        List<UUID> ids = office.getPermitIds();
+
+        assertEquals(2, ids.size());
+    }
+
+
+
 }

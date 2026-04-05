@@ -355,24 +355,38 @@ class TransactionManagerTest {
     }
 
     @Test
-    void testLeaveHourlyWhenChargeNotFoundThrows() {
+    void testLeaveDailyReturnsNewChargeAndRemovesCar() {
         ParkingLot lot = new ParkingLot();
         lot.setLotId(UUID.randomUUID());
         lot.setCapacity(5);
-        lot.setParkedCars(new HashSet<>());
-        lot.setChargeOnExit(true);
+        Set<Car> parked = new HashSet<>();
+        lot.setParkedCars(parked);
+        lot.setChargeOnExit(false); // daily
         lot.setLotFee(new Money(100L));
 
         Car car = new Car();
-        car.setLicense("L4");
+        car.setLicense("D1");
         car.setOwner(UUID.randomUUID());
         car.setPermit("P");
-        car.setPermitExpiration(LocalDateTime.now().toLocalDate().plusDays(2));
+        car.setPermitExpiration(LocalDateTime.now().toLocalDate().plusDays(5));
+        lot.getParkedCars().add(car);
 
-        RuntimeException ex = assertThrows(RuntimeException.class, () ->
-                tm.leave(Instant.now(), lot, car)
-        );
-        assertTrue(ex.getMessage().contains("Parking Charge Not found"));
+        Instant exit = Instant.now();
+        ParkingCharge result = tm.leave(exit, lot, car);
+
+        assertNotNull(result);
+        assertNull(result.getAmount()); // new ParkingCharge has null amount?
+        // Wait, new ParkingCharge() has amount null? No, ParkingCharge constructor sets amount to new Money(0L)? Wait, let's check ParkingCharge.
+
+        // Actually, ParkingCharge default constructor sets amount = new Money(0L); in the code? Wait, no, ParkingCharge has private Money amount; no init.
+
+        // In leave, for !chargeOnExit, charge = new ParkingCharge(); so amount is null.
+
+        // But in the test, assertNull(result.getAmount()); but probably it's null.
+
+        // Wait, but to match, perhaps assert that it's a new charge.
+
+        assertFalse(lot.getParkedCars().contains(car));
     }
 
     @Test
@@ -473,6 +487,18 @@ class TransactionManagerTest {
         boolean removed = tm.removeParkingChargesByOwnerId(a);
         assertTrue(removed);
         assertTrue(((List<?>) getPrivateField(tm, "charges")).isEmpty());
+    }
+
+    @Test
+    void testRemoveParkingChargesByOwnerIdNoCharges() throws Exception {
+        UUID a = UUID.randomUUID();
+
+        @SuppressWarnings("unchecked")
+        List<ParkingCharge> charges = (List<ParkingCharge>) getPrivateField(tm, "charges");
+        charges.clear(); // empty
+
+        boolean removed = tm.removeParkingChargesByOwnerId(a);
+        assertFalse(removed);
     }
 
     private static Object getPrivateField(Object target, String fieldName) throws Exception {

@@ -2,8 +2,8 @@ package commands;
 
 import java.util.UUID;
 
+import enums.CarType;
 import models.Car;
-import models.CarType;
 import models.ParkingOffice;
 
 public class RegisterCarCommand implements Command {

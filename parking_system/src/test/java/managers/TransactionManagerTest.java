@@ -1,25 +1,35 @@
 // File: ICT_4305/Week_4/src/test/java/classes/TransactionManagerTest.java
-package models;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import models.Address;
-import models.Car;
-import models.CarType;
-import models.Customer;
-import models.Money;
-import models.ParkingCharge;
-import models.ParkingLot;
-import models.TransactionManager;
+package managers;
 
 import java.lang.reflect.Field;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import enums.CarType;
+import models.Address;
+import models.Car;
+import models.Customer;
+import models.Money;
+import models.ParkingCharge;
+import models.ParkingLot;
+import strategies.CarTypeStrategy;
+import strategies.DayOfWeekStrategy;
+import strategies.StrategyTestHelper;
 
 class TransactionManagerTest {
 
@@ -431,11 +441,6 @@ class TransactionManagerTest {
         Double total = tm.calculatePermitBill(car);
         assertEquals(3.0, total, 0.0001);
 
-        // compact car => 20% discount => $2.40
-        car.setType(CarType.COMPACT);
-        Double discounted = tm.calculatePermitBill(car);
-        assertEquals(2.4, discounted, 0.0001);
-
         // calculateCustomerMonthlyBill: prepare customer with cars
         Customer cust = new Customer();
         cust.setCustomerId(ownerId);
@@ -499,6 +504,71 @@ class TransactionManagerTest {
 
         boolean removed = tm.removeParkingChargesByOwnerId(a);
         assertFalse(removed);
+    }
+
+    @Test
+    void testCalculateBaseChargeHourlyMinimumOneHour() {
+        TransactionManager local = new TransactionManager();
+        models.ParkingLot lot = new models.ParkingLot();
+        lot.setChargeOnExit(true);
+        lot.setLotFee(new Money(500L)); // $5/hour
+
+        Instant entry = Instant.now();
+        Instant exit = entry.plusSeconds(30 * 60); // 30 minutes later
+
+        Money m = local.calculateBaseCharge(lot, new models.Car(), entry, exit);
+        // should charge at least 1 hour
+        assertEquals(500L, m.getCents());
+    }
+
+    @Test
+    void testCalculateBaseChargeDailyWhenExitNullAndChargeOnExitTrue() {
+        TransactionManager local = new TransactionManager();
+        models.ParkingLot lot = new models.ParkingLot();
+        lot.setChargeOnExit(true);
+        lot.setLotFee(new Money(200L));
+
+        Money m = local.calculateBaseCharge(lot, new models.Car(), null, null);
+        // for hourly lots with null exitTime should return $0 initial
+        assertEquals(0L, m.getCents());
+    }
+
+    @Test
+    void testCalculateBaseChargeExitOnDailyLotReturnsLotFee() {
+        TransactionManager local = new TransactionManager();
+        models.ParkingLot lot = new models.ParkingLot();
+        lot.setChargeOnExit(false);
+        lot.setLotFee(new Money(250L));
+
+        Instant entry = Instant.now().minusSeconds(3600);
+        Instant exit = Instant.now();
+
+        Money m = local.calculateBaseCharge(lot, new models.Car(), entry, exit);
+        assertEquals(250L, m.getCents());
+    }
+
+    @Test
+    void testCalculateParkingChargeAppliesCombinedCarTypeAndDayOfWeekDiscounts() {
+        ParkingLot lot = StrategyTestHelper.createLot(false, 20.0, new CarTypeStrategy(), new DayOfWeekStrategy());
+        ParkingCharge charge = tm.calculateParkingCharge(lot, StrategyTestHelper.createCar(CarType.COMPACT), StrategyTestHelper.toInstant(2026, 4, 18, 10, 0), null);
+
+        assertEquals(14.40, charge.getAmount().getDollars(), 0.001);
+    }
+
+    @Test
+    void testCalculateParkingChargeUsesBaseRateForSuvOnWeekday() {
+        ParkingLot lot = StrategyTestHelper.createLot(false, 20.0, new CarTypeStrategy(), new DayOfWeekStrategy());
+        ParkingCharge charge = tm.calculateParkingCharge(lot, StrategyTestHelper.createCar(CarType.SUV), StrategyTestHelper.toInstant(2026, 4, 20, 10, 0), null);
+
+        assertEquals(20.00, charge.getAmount().getDollars(), 0.001);
+    }
+
+    @Test
+    void testCalculateParkingChargeAppliesOnlyCarTypeDiscountForCompactOnWeekday() {
+        ParkingLot lot = StrategyTestHelper.createLot(false, 20.0, new CarTypeStrategy(), new DayOfWeekStrategy());
+        ParkingCharge charge = tm.calculateParkingCharge(lot, StrategyTestHelper.createCar(CarType.COMPACT), StrategyTestHelper.toInstant(2026, 4, 20, 10, 0), null);
+
+        assertEquals(16.00, charge.getAmount().getDollars(), 0.001);
     }
 
     private static Object getPrivateField(Object target, String fieldName) throws Exception {

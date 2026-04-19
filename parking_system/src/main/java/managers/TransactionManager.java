@@ -1,13 +1,19 @@
-package models;
+package managers;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
+
+import enums.CarType;
+import models.Car;
+import models.Customer;
+import models.Money;
+import models.ParkingCharge;
+import models.ParkingLot;
+import strategies.ParkingStrategy;
 
 /**
  * This is the class that manages all the parking transactions.
@@ -44,7 +50,9 @@ public class TransactionManager {
 			}
 
 			lot.getParkedCars().add(car);
-			return this.createOrUpdateEntryParkingCharge(lot, car);
+			ParkingCharge charge = this.createOrUpdateEntryParkingCharge(lot, car);
+			charges.add(charge);
+			return charge;
 		} catch (Exception e) {
 			System.err.println("Failed to validate entry: " + e.getMessage());
 			throw new RuntimeException(e.getMessage());
@@ -63,25 +71,19 @@ public class TransactionManager {
 	public ParkingCharge leave(Instant exitTime, ParkingLot lot, Car car) {
 		ParkingCharge charge;
 			if (lot.getChargeOnExit()) {
-				charge = this.findParkingChargeByLotIdAndOwnerId(lot.getLotId(), car.getOwner());
+				charge = this.findParkingChargeByLotIdAndPermitId(lot.getLotId(), car.getOwner());
 				if (charge == null) {
 					throw new RuntimeException("Parking Charge Not found! Unable to Calculate Hourly Rate.");
 				}
 				Instant entryTime = charge.getIncurred();
 
-				Integer hoursBetween = (int) ChronoUnit.HOURS.between(entryTime, exitTime);
-				
+				long hoursBetween = ChronoUnit.HOURS.between(entryTime, exitTime);
 				if (hoursBetween < 0) {
-				    throw new RuntimeException("Invalid parking time detected.");
+					throw new RuntimeException("Invalid parking time detected.");
 				}
-				
-				Double hourlyChargeInDollars = hoursBetween * lot.getLotFee().getDollars();
 
-				Double currentParkingLotChargesInDollars = charge.getAmount().getDollars();
-				Double updatedParkingLotChargesInDollars = currentParkingLotChargesInDollars + hourlyChargeInDollars;
-
-				Money chargeAmount = new Money(updatedParkingLotChargesInDollars);
-				charge.setAmount(chargeAmount);
+				ParkingCharge calculatedCharge = calculateParkingCharge(lot, car, entryTime, exitTime);
+				charge.setAmount(calculatedCharge.getAmount());
 				charge.setIncurred(null);
 				lot.getParkedCars().remove(car);
 			} else {
@@ -90,6 +92,44 @@ public class TransactionManager {
 			}
 		return charge;
 	}
+	
+	public ParkingCharge calculateParkingCharge(ParkingLot lot, Car car, Instant entryTime, Instant exitTime) {
+		ParkingCharge parkingCharge = new ParkingCharge();
+		parkingCharge.setLotId(lot.getLotId());
+		parkingCharge.setPermitId(car.getOwner());
+		
+		Money amount;
+			amount = calculateBaseCharge(lot, car, entryTime, exitTime);
+			for (ParkingStrategy adj : lot.getStrategies()) {
+				amount = adj.adjustCharge(amount, lot, car, entryTime, exitTime);
+			}
+		
+		parkingCharge.setAmount(amount);
+		if (exitTime != null) {
+			parkingCharge.setIncurred(entryTime);
+		}
+		return parkingCharge;
+	};
+	
+    public Money calculateBaseCharge(ParkingLot parkingLot, Car car, Instant entryTime, Instant exitTime) {
+        if (exitTime == null) {
+            // Entry
+            if (parkingLot.getChargeOnExit()) {
+                return new Money(0L);
+            } else {
+                return parkingLot.getLotFee();
+            }
+        } else {
+            // Exit
+            if (parkingLot.getChargeOnExit()) {
+                long hours = ChronoUnit.HOURS.between(entryTime, exitTime);
+                if (hours < 1) hours = 1;
+                return new Money(parkingLot.getLotFee().getDollars() * hours);
+            } else {
+                return parkingLot.getLotFee();
+            }
+        }
+    }
 	
 	/*
 	 * Upon entering a parking lot for the first time, a parking charge will be
@@ -102,25 +142,25 @@ public class TransactionManager {
 	 * the charge to calculate the rate when the car exits the lot.
 	 */
 	public ParkingCharge createOrUpdateEntryParkingCharge(ParkingLot lot, Car car) {
-		ParkingCharge charge = this.findParkingChargeByLotIdAndOwnerId(lot.getLotId(), car.getOwner());
-		Money lotFee = lot.getLotFee();
+		ParkingCharge charge = this.findParkingChargeByLotIdAndPermitId(lot.getLotId(), car.getOwner());
 		if (charge != null) {
 			if (!lot.getChargeOnExit()) {
-
-				charge.setAmount(addCharge(charge, lotFee));
+				// Add daily charge
+				Money additionalCharge = calculateParkingCharge(lot, car, Instant.now(), null).getAmount();
+				charge.setAmount(addCharge(charge, additionalCharge));
 			} else {
 				charge.setIncurred(Instant.now());
 			}
 		} else {
 			charge = new ParkingCharge();
 			charge.setLotId(lot.getLotId());
-			charge.setPermitId(car.getOwner());
+				charge.setPermitId(car.getOwner());
 			charge.setIncurred(Instant.now());
 			if (lot.getChargeOnExit()) {
 				Long noInitialFee = 0L;
 				charge.setAmount(new Money(noInitialFee));
 			} else {
-				charge.setAmount(lot.getLotFee());
+				charge.setAmount(calculateParkingCharge(lot, car, Instant.now(), null).getAmount());
 			}
 		}
 		
@@ -133,10 +173,14 @@ public class TransactionManager {
 	 * are both unique identifiers pertaining to Parking Lots and Car Permits. Using
 	 * both allows specific retrieval of ParkingCharges for updating permit bills.
 	 */
-	public ParkingCharge findParkingChargeByLotIdAndOwnerId(UUID lotId, UUID ownerId) {
+	public ParkingCharge findParkingChargeByLotIdAndPermitId(UUID lotId, UUID permitId) {
 		return charges.stream()
-				.filter(charge -> charge.getLotId().equals(lotId) && charge.getPermitId().equals(ownerId)).findFirst()
+				.filter(charge -> charge.getLotId().equals(lotId) && charge.getPermitId().equals(permitId)).findFirst()
 				.orElse(null);
+	}
+
+	public ParkingCharge findParkingChargeByLotIdAndOwnerId(UUID lotId, UUID ownerId) {
+		return findParkingChargeByLotIdAndPermitId(lotId, ownerId);
 	}
 
 
@@ -147,8 +191,9 @@ public class TransactionManager {
 	public void updateDailyFees(List<ParkingLot> lots) {
 		for (ParkingLot lot : lots.stream().filter(lot -> !lot.getChargeOnExit()).toList()) {
 			for (Car car : lot.getParkedCars()) {
-				ParkingCharge charge = this.findParkingChargeByLotIdAndOwnerId(lot.getLotId(), car.getOwner());
-				charge.setAmount(addCharge(charge, lot.getLotFee()));
+				ParkingCharge charge = this.findParkingChargeByLotIdAndPermitId(lot.getLotId(), car.getOwner());
+				Money additionalCharge = calculateParkingCharge(lot, car, Instant.now(), null).getAmount();
+				charge.setAmount(addCharge(charge, additionalCharge));
 			}
 		}		
 	}
@@ -156,17 +201,14 @@ public class TransactionManager {
 	/*
 	 * This method would be called for each car when the University Parking Office
 	 * calculates the monthly bill for customers. Since customers can register
-	 * multiple cars, the total bill for each car is calculated separately. This
-	 * allows the 20% compact car discount to apply on a car by car basis.
+	 * multiple cars, the total bill for each car is calculated separately, 
+	 * this is a hold-over from when compact cars were guaranteed a discounted rate.
 	 */
 	public Double calculatePermitBill(Car car) {
 		Double total = 0.0;
-		List<ParkingCharge> charges = findParkingChargesByOwnerId(car.getOwner());
-		for (ParkingCharge charge : charges) {
+		List<ParkingCharge> carCharges = findParkingChargesByPermitId(car.getOwner());
+		for (ParkingCharge charge : carCharges) {
 			total += charge.getAmount().getDollars();
-		}
-		if (car.getType() == CarType.COMPACT) {
-			total = total * 0.8;
 		}
 
 		return total;
@@ -191,7 +233,10 @@ public class TransactionManager {
 			sb.append("Bill Amount: $").append(total).append("\n");
 			sb.append("Successfuly Sent to: $").append(customer.getAddress().getAddressInfo());
 			System.out.println(sb.toString());
-			return removeParkingChargesByOwnerId(customer.getCustomerId());
+			for (Car car : customer.getCars()) {
+				removeParkingChargesByPermitId(car.getOwner());
+			}
+			return true;
 		} catch (Exception e) {
 			throw new RuntimeException("Failed to Process Customer Monthly Bill: " + e.getMessage());
 		}
@@ -218,16 +263,24 @@ public class TransactionManager {
 	 * Retrieve all Cars matching given customerId. Used for calculating car permit
 	 * bill.
 	 */
+	public List<ParkingCharge> findParkingChargesByPermitId(UUID permitId) {
+		return charges.stream().filter(charge -> charge.getPermitId().equals(permitId)).toList();
+	}
+
 	public List<ParkingCharge> findParkingChargesByOwnerId(UUID ownerId) {
-		return charges.stream().filter(charge -> charge.getPermitId().equals(ownerId)).toList();
+		return findParkingChargesByPermitId(ownerId);
 	}
 
 	/*
 	 * Once parking charges are successfully sent to a customer all charges matching
 	 * that customer id are removed from the ParkingCharge list.
 	 */
+	public Boolean removeParkingChargesByPermitId(UUID permitId) {
+		return charges.removeIf(charge -> charge.getPermitId().equals(permitId));
+	}
+
 	public Boolean removeParkingChargesByOwnerId(UUID ownerId) {
-		return charges.removeIf(charge -> charge.getPermitId().equals(ownerId));
+		return removeParkingChargesByPermitId(ownerId);
 	}
 
 }

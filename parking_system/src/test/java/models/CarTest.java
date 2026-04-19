@@ -3,8 +3,8 @@ package models;
 
 import org.junit.jupiter.api.Test;
 
+import enums.CarType;
 import models.Car;
-import models.CarType;
 
 import java.time.LocalDate;
 import java.util.UUID;

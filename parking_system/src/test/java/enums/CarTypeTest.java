@@ -1,10 +1,10 @@
-package models;
+package enums;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.Test;
 
-import models.CarType;
+import enums.CarType;
 
 public class CarTypeTest {
 

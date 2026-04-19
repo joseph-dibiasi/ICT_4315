@@ -1,7 +1,12 @@
-package models;
+package managers;
 
 import java.time.LocalDate;
 import java.util.UUID;
+
+import enums.CarType;
+import models.Address;
+import models.Car;
+import models.Customer;
 
 /**
  * This is the manager class which manages all the parking permits.

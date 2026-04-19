@@ -1,5 +1,5 @@
 // File: ICT_4305/Week_4/src/test/java/classes/PermitManagerTest.java
-package models;
+package managers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -12,11 +12,11 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
+import enums.CarType;
+import managers.PermitManager;
 import models.Address;
 import models.Car;
-import models.CarType;
 import models.Customer;
-import models.PermitManager;
 
 class PermitManagerTest {
 

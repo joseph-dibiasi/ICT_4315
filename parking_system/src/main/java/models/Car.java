@@ -1,9 +1,10 @@
 package models;
 
 import java.time.LocalDate;
-import java.util.HashMap;
 import java.util.Objects;
 import java.util.UUID;
+
+import enums.CarType;
 
 public class Car {
 
@@ -19,8 +20,11 @@ public class Car {
 		this.owner = owner;
 	}
 
-	// Customer name. Not unique.
+	// Parking permit code.
 	private String permit;
+
+	// Customer ID. Unique.
+	private UUID owner;
 
 	private LocalDate permitExpiration;
 
@@ -28,9 +32,6 @@ public class Car {
 	private String license;
 
 	private CarType type;
-
-	// Customer ID. Unique.
-	private UUID owner;
 
 	public String getPermit() {
 		return permit;

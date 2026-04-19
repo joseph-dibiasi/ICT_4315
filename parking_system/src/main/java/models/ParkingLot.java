@@ -1,9 +1,13 @@
 package models;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+
+import strategies.ParkingStrategy;
 
 public class ParkingLot {
 
@@ -20,6 +24,9 @@ public class ParkingLot {
 	private Money lotFee;
 
 	private Set<Car> parkedCars;
+		
+	// Strategies are implemented as a list to allow maximum flexibility in how many are applied per lot. 
+	private List<ParkingStrategy> strategies;
 
 	public UUID getLotId() {
 		return lotId;
@@ -68,7 +75,7 @@ public class ParkingLot {
 
 	public Set<Car> getParkedCars() {
 		if (parkedCars == null) {
-			setParkedCars(new HashSet<Car>());
+			setParkedCars(new HashSet<>());
 		}
 		return parkedCars;
 	}
@@ -79,7 +86,7 @@ public class ParkingLot {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(address, capacity, chargeOnExit, lotFee, lotId, parkedCars);
+		return Objects.hash(address, capacity, chargeOnExit, lotFee, lotId, parkedCars, strategies);
 	}
 
 	@Override
@@ -93,7 +100,19 @@ public class ParkingLot {
 		ParkingLot other = (ParkingLot) obj;
 		return Objects.equals(address, other.address) && Objects.equals(capacity, other.capacity)
 				&& Objects.equals(chargeOnExit, other.chargeOnExit) && Objects.equals(lotFee, other.lotFee)
-				&& Objects.equals(lotId, other.lotId) && Objects.equals(parkedCars, other.parkedCars);
+				&& Objects.equals(lotId, other.lotId) && Objects.equals(parkedCars, other.parkedCars)
+				&& Objects.equals(strategies, other.strategies);
+	}
+
+	public List<ParkingStrategy> getStrategies() {
+		if (strategies == null) {
+			strategies = new ArrayList<>();
+		}
+		return strategies;
+	}
+
+	public void setStrategies(List<ParkingStrategy> strategies) {
+		this.strategies = strategies;
 	}
 
 }

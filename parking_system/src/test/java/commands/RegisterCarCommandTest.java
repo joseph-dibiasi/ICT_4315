@@ -8,8 +8,8 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import enums.CarType;
 import models.Car;
-import models.CarType;
 import models.ParkingOffice;
 
 class RegisterCarCommandTest {

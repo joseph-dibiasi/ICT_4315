@@ -11,8 +11,8 @@ import org.junit.jupiter.api.Test;
 import commands.Command;
 import commands.RegisterCarCommand;
 import commands.RegisterCustomerCommand;
+import enums.CarType;
 import models.Address;
-import models.CarType;
 import models.ParkingOffice;
 
 class ParkingServiceTest {

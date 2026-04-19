@@ -7,6 +7,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import managers.PermitManager;
+import managers.TransactionManager;
+
 public class ParkingOffice {
 
 	private String name;
@@ -41,8 +44,8 @@ public class ParkingOffice {
 		this.transactionManager = new TransactionManager();
 	}
 
-	public void register(Customer customer) {
-		permitManager.register(customer.getName(), customer.getAddress(), customer.getPhoneNumber());
+	public Customer register(Customer customer) {
+		return permitManager.register(customer.getName(), customer.getAddress(), customer.getPhoneNumber());
 	}
 
 	public Car register(Car car) {

@@ -1,5 +1,5 @@
 //package factories;
-//
+// Future development stubbed out.
 //import enums.StrategyType;
 //import strategies.ParkingStrategy;
 //import strategies.CarTypeStrategy;

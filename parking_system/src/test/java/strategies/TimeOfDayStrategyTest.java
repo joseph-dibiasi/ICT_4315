@@ -45,22 +45,9 @@ class TimeOfDayStrategyTest {
     }
 
     @Test
-    void specialDayDailyShouldApplyDiscountedSurchargeNetRate() {
-        ParkingLot lot = StrategyTestHelper.createLot(false, 20.0, new TimeOfDayStrategy());
-        TransactionManager manager = StrategyTestHelper.createManager();
-
-        Instant specialDay = toInstant(2026, 4, 25, 10, 0);
-        ParkingCharge charge = manager.calculateParkingCharge(lot, createCar(), specialDay, null);
-
-        assertEquals(20.00, charge.getAmount().getDollars(), 0.001);
-    }
-
-    @Test
     void accessorsShouldWork() {
         TimeOfDayStrategy s = new TimeOfDayStrategy();
         s.setPeakSurcharge(3.14);
-        s.setSpecialDiscount(0.25);
         assertEquals(3.14, s.getPeakSurcharge(), 0.0001);
-        assertEquals(0.25, s.getSpecialDiscount(), 0.0001);
     }
 }

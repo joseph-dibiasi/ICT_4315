@@ -7,11 +7,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import enums.CarType;
 import models.Car;
 import models.Customer;
 import models.Money;
 import models.ParkingCharge;
+import models.ParkingCharge.ParkingChargeBuilder;
 import models.ParkingLot;
 import strategies.ParkingStrategy;
 
@@ -87,16 +87,15 @@ public class TransactionManager {
 				charge.setIncurred(null);
 				lot.getParkedCars().remove(car);
 			} else {
-				charge = new ParkingCharge();
+				ParkingChargeBuilder parkingChargeBuilder = new ParkingChargeBuilder();
+				charge = parkingChargeBuilder.build();
 				lot.getParkedCars().remove(car);
 			}
 		return charge;
 	}
 	
 	public ParkingCharge calculateParkingCharge(ParkingLot lot, Car car, Instant entryTime, Instant exitTime) {
-		ParkingCharge parkingCharge = new ParkingCharge();
-		parkingCharge.setLotId(lot.getLotId());
-		parkingCharge.setPermitId(car.getOwner());
+		ParkingChargeBuilder parkingChargeBuilder = new ParkingChargeBuilder(car.getOwner(), lot.getLotId());
 		
 		Money amount;
 			amount = calculateBaseCharge(lot, car, entryTime, exitTime);
@@ -104,11 +103,11 @@ public class TransactionManager {
 				amount = adj.adjustCharge(amount, lot, car, entryTime, exitTime);
 			}
 		
-		parkingCharge.setAmount(amount);
+		parkingChargeBuilder.amount(amount);
 		if (exitTime != null) {
-			parkingCharge.setIncurred(entryTime);
+			parkingChargeBuilder.incurred(entryTime);
 		}
-		return parkingCharge;
+		return parkingChargeBuilder.build();
 	};
 	
     public Money calculateBaseCharge(ParkingLot parkingLot, Car car, Instant entryTime, Instant exitTime) {
@@ -152,16 +151,15 @@ public class TransactionManager {
 				charge.setIncurred(Instant.now());
 			}
 		} else {
-			charge = new ParkingCharge();
-			charge.setLotId(lot.getLotId());
-				charge.setPermitId(car.getOwner());
-			charge.setIncurred(Instant.now());
+			ParkingChargeBuilder parkingChargeBuilder = new ParkingChargeBuilder(car.getOwner(), lot.getLotId());
+			parkingChargeBuilder.incurred(Instant.now());
 			if (lot.getChargeOnExit()) {
 				Long noInitialFee = 0L;
-				charge.setAmount(new Money(noInitialFee));
+				parkingChargeBuilder.amount(new Money(noInitialFee));
 			} else {
-				charge.setAmount(calculateParkingCharge(lot, car, Instant.now(), null).getAmount());
+				parkingChargeBuilder.amount(calculateParkingCharge(lot, car, Instant.now(), null).getAmount());
 			}
+			charge = parkingChargeBuilder.build();
 		}
 		
 		return charge;

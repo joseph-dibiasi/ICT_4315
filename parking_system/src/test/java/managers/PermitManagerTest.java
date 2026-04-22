@@ -1,20 +1,19 @@
 // File: ICT_4305/Week_4/src/test/java/classes/PermitManagerTest.java
 package managers;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 import enums.CarType;
-import managers.PermitManager;
 import models.Address;
+import models.Address.AddressBuilder;
 import models.Car;
 import models.Customer;
 
@@ -23,8 +22,8 @@ class PermitManagerTest {
     @Test
     void testRegisterCreatesCustomerWithFields() {
         PermitManager pm = new PermitManager();
-        Address addr = new Address();
-        addr.setCity("Town");
+        AddressBuilder addressBuilder = new AddressBuilder();
+        Address addr = addressBuilder.city("Town").build();
         Customer c = pm.register("Alice", addr, "555-0000");
 
         assertNotNull(c);
@@ -37,7 +36,7 @@ class PermitManagerTest {
     @Test
     void testRegisterCustomerAddsCarToCustomerCarsList() {
         PermitManager pm = new PermitManager();
-        Customer customer = new Customer();
+        Customer customer = Customer.builder(UUID.randomUUID(), "Test").build();
         UUID ownerId = UUID.randomUUID();
         customer.setCustomerId(ownerId);
         // production code expects getCars() to be non-null before calling register(customer,...)

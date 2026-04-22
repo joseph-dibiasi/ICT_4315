@@ -1,12 +1,17 @@
 package commands;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
-
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import models.Address;
+import models.Address.AddressBuilder;
 import models.Customer;
 import models.ParkingOffice;
 
@@ -21,12 +26,8 @@ class RegisterCustomerCommandTest {
     void setUp() {
         mockParkingOffice = mock(ParkingOffice.class);
         command = new RegisterCustomerCommand(mockParkingOffice);
-        
-        testAddress = new Address();
-        testAddress.setStreetAddress1("123 Main St");
-        testAddress.setCity("Test City");
-        testAddress.setState("TS");
-        testAddress.setZipCode("12345");
+        AddressBuilder addressBuilder = new AddressBuilder();
+        testAddress = addressBuilder.streetAddress1("123 Main St").city("Test City").state("TS").zipCode("12345").build();
         
         validParams = new String[] {"John Doe", "123 Main St", "555-1234"};
     }

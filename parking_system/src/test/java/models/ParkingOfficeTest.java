@@ -1,20 +1,6 @@
 // File: ICT_4305/Week_4/src/test/java/classes/ParkingOfficeTest.java
 package models;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import enums.CarType;
-import managers.PermitManager;
-import managers.TransactionManager;
-import models.Address;
-import models.Car;
-import models.Customer;
-import models.Money;
-import models.ParkingCharge;
-import models.ParkingLot;
-import models.ParkingOffice;
-
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -23,10 +9,22 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
+import enums.CarType;
+import managers.PermitManager;
+import managers.TransactionManager;
 
 class ParkingOfficeTest {
 
@@ -38,11 +36,12 @@ class ParkingOfficeTest {
     }
 
     private Address createTestAddress() {
-        Address address = new Address();
-        address.setStreetAddress1("123 Main St");
-        address.setCity("Springfield");
-        address.setState("IL");
-        address.setZipCode("62701");
+        Address address = Address.builder()
+                .streetAddress1("123 Main St")
+                .city("Springfield")
+                .state("IL")
+                .zipCode("62701")
+                .build();
         return address;
     }
 
@@ -60,8 +59,7 @@ class ParkingOfficeTest {
     @Test
     void testSetNameAndAddress() {
         parkingOffice.setName("New Name");
-        Address a = new Address();
-        a.setCity("X");
+        Address a = Address.builder().city("X").build();
         parkingOffice.setAddress(a);
         assertEquals("New Name", parkingOffice.getName());
         assertEquals("X", parkingOffice.getAddress().getCity());
@@ -95,10 +93,8 @@ class ParkingOfficeTest {
 
     @Test
     void testRegisterCustomerDelegatesButDoesNotAddToList() {
-        Customer c = new Customer();
-        c.setName("Alice");
-        c.setAddress(createTestAddress());
-        c.setPhoneNumber("555-1234");
+        UUID cId = UUID.randomUUID();
+        Customer c = Customer.builder(cId, "Alice").address(createTestAddress()).phoneNumber("555-1234").build();
 
         // Current production implementation calls permitManager.register(...) but does not add to the office's customers list.
         parkingOffice.register(c);
@@ -116,8 +112,8 @@ class ParkingOfficeTest {
 
     @Test
     void testGetCustomerIdsAndPermitIdsWithCustomerCars() {
-        Customer customer = new Customer();
-        customer.setCustomerId(UUID.randomUUID());
+        UUID custId = UUID.randomUUID();
+        Customer customer = Customer.builder(custId, "Test").build();
         Car carA = new Car();
         carA.setOwner(customer.getCustomerId());
         carA.setLicense("A1");
@@ -137,9 +133,8 @@ class ParkingOfficeTest {
 
     @Test
     void testGetCustomerFoundAndEqualsAndHashCode() {
-        Customer customer = new Customer();
         UUID customerId = UUID.randomUUID();
-        customer.setCustomerId(customerId);
+        Customer customer = Customer.builder(customerId, "Test").build();
         parkingOffice.setCustomers(List.of(customer));
 
         assertEquals(customer, parkingOffice.getCustomer(customerId));
@@ -181,13 +176,8 @@ class ParkingOfficeTest {
 
     @Test
     void testRegisterCarDelegatesToPermitManagerAndReturnsCar() {
-        Customer customer = new Customer();
         UUID customerId = UUID.randomUUID();
-        customer.setCustomerId(customerId);
-        customer.setCars(new ArrayList<>());
-        customer.setName("Alice");
-        customer.setAddress(createTestAddress());
-        customer.setPhoneNumber("555-1234");
+        Customer customer = Customer.builder(customerId, "Alice").cars(new ArrayList<>()).address(createTestAddress()).phoneNumber("555-1234").build();
 
         parkingOffice.setCustomers(List.of(customer));
 
@@ -216,12 +206,8 @@ class ParkingOfficeTest {
 
     @Test
     void testParkDelegatesToTransactionManager() {
-        Customer customer = new Customer();
         UUID customerId = UUID.randomUUID();
-        customer.setCustomerId(customerId);
-        customer.setName("Alice");
-        customer.setAddress(createTestAddress());
-        customer.setPhoneNumber("555-1234");
+        Customer customer = Customer.builder(customerId, "Alice").address(createTestAddress()).phoneNumber("555-1234").build();
         List<Car> cars = new ArrayList<>();
         customer.setCars(cars);
         parkingOffice.setCustomers(List.of(customer));
@@ -306,12 +292,8 @@ class ParkingOfficeTest {
 
     @Test
     void testCalculateCustomerMonthlyBillDelegatesToTransactionManager() {
-        Customer customer = new Customer();
         UUID customerId = UUID.randomUUID();
-        customer.setCustomerId(customerId);
-        customer.setName("Alice");
-        customer.setAddress(createTestAddress());
-        customer.setPhoneNumber("555-1234");
+        Customer customer = Customer.builder(customerId, "Alice").address(createTestAddress()).phoneNumber("555-1234").build();
         Car car = new Car();
         car.setOwner(customerId);
         car.setType(CarType.SUV);
@@ -353,7 +335,7 @@ class ParkingOfficeTest {
     @Test
     void testNotEqualsDifferentCustomers() {
         ParkingOffice office1 = new ParkingOffice("Name", createTestAddress());
-        office1.setCustomers(List.of(new Customer()));
+        office1.setCustomers(List.of(Customer.builder(UUID.randomUUID(), "Test").build()));
 
         ParkingOffice office2 = new ParkingOffice("Name", createTestAddress());
         office2.setCustomers(new ArrayList<>());
@@ -393,7 +375,7 @@ class ParkingOfficeTest {
     @Test
     void testNotEqualsNullCustomers() throws Exception {
         ParkingOffice office1 = new ParkingOffice("Name", createTestAddress());
-        office1.setCustomers(List.of(new Customer()));
+        office1.setCustomers(List.of(Customer.builder(UUID.randomUUID(), "Test").build()));
 
         ParkingOffice office2 = new ParkingOffice("Name", createTestAddress());
         // set customers to null
@@ -413,7 +395,7 @@ class ParkingOfficeTest {
         f.set(office1, null);
 
         ParkingOffice office2 = new ParkingOffice("Name", createTestAddress());
-        office2.setCustomers(List.of(new Customer()));
+        office2.setCustomers(List.of(Customer.builder(UUID.randomUUID(), "Test").build()));
 
         assertNotEquals(office1, office2);
     }
@@ -461,7 +443,7 @@ class ParkingOfficeTest {
     @Test
     public void testLeaveSuccess() {
         TransactionManager tm = mock(TransactionManager.class);
-        ParkingCharge charge = new ParkingCharge();
+        ParkingCharge charge = ParkingCharge.builder().build();
         when(tm.leave(any(), any(), any())).thenReturn(charge);
 
         ParkingOffice office = new ParkingOffice(new PermitManager(), tm);
@@ -480,15 +462,10 @@ class ParkingOfficeTest {
     public void testGetPermitIdsMultipleCustomers() {
         ParkingOffice office = new ParkingOffice();
         
-        Customer c1 = new Customer();
-        c1.setName("Alice");
-        c1.setCustomerId(UUID.randomUUID());
-        c1.setCars(new ArrayList<>());
-        
-        Customer c2 = new Customer();
-        c2.setName("Bob");
-        c2.setCustomerId(UUID.randomUUID());
-        c2.setCars(new ArrayList<>());
+        UUID id1 = UUID.randomUUID();
+        UUID id2 = UUID.randomUUID();
+        Customer c1 = Customer.builder(id1, "Alice").cars(new ArrayList<>()).build();
+        Customer c2 = Customer.builder(id2, "Bob").cars(new ArrayList<>()).build();
         
         Car car1 = new Car();
         car1.setLicense("Car1");

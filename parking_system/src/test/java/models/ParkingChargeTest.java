@@ -1,17 +1,17 @@
 package models;
 
-import org.junit.jupiter.api.Test;
-
 import java.time.Instant;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import org.junit.jupiter.api.Test;
 
 class ParkingChargeTest {
 
     @Test
     void testGettersAndSetters() {
-        ParkingCharge charge = new ParkingCharge();
+        ParkingCharge charge = ParkingCharge.builder().build();
         UUID permitId = UUID.randomUUID();
         UUID lotId = UUID.randomUUID();
         Instant incurred = Instant.now();
@@ -35,13 +35,13 @@ class ParkingChargeTest {
         Instant incurred = Instant.parse("2025-01-01T12:00:00Z");
         Money amount = new Money(250L);
 
-        ParkingCharge c1 = new ParkingCharge();
+        ParkingCharge c1 = ParkingCharge.builder().build();
         c1.setPermitId(permitId);
         c1.setLotId(lotId);
         c1.setIncurred(incurred);
         c1.setAmount(amount);
 
-        ParkingCharge c2 = new ParkingCharge();
+        ParkingCharge c2 = ParkingCharge.builder().build();
         c2.setPermitId(permitId);
         c2.setLotId(lotId);
         c2.setIncurred(incurred);
@@ -54,7 +54,7 @@ class ParkingChargeTest {
         assertNotEquals(c1, null);
         assertNotEquals(c1, "not a charge");
 
-        ParkingCharge c3 = new ParkingCharge();
+        ParkingCharge c3 = ParkingCharge.builder().build();
         c3.setPermitId(UUID.randomUUID());
         assertNotEquals(c1, c3);
     }

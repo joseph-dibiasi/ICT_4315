@@ -7,6 +7,7 @@ import enums.CarType;
 import models.Address;
 import models.Car;
 import models.Customer;
+import models.Customer.CustomerBuilder;
 
 /**
  * This is the manager class which manages all the parking permits.
@@ -14,12 +15,12 @@ import models.Customer;
 public class PermitManager {
 
 	public Customer register(String name, Address address, String phone) {
-		Customer customer = new Customer();
-		customer.setCustomerId(UUID.randomUUID());
-		customer.setName(name);
-		customer.setAddress(address);
-		customer.setPhoneNumber(phone);
-		return customer;
+		CustomerBuilder customerBuilder = new CustomerBuilder();
+		customerBuilder.customerId(UUID.randomUUID());
+		customerBuilder.name(name);
+		customerBuilder.address(address);
+		customerBuilder.phoneNumber(phone);
+		return customerBuilder.build();
 	}
 
 	public Customer register(Customer customer, String license, CarType type) {

@@ -5,17 +5,18 @@ import java.util.Objects;
 public class Address {
 
 	private String streetAddress1;
-	
+
 	private String streetAddress2;
-	
+
 	private String city;
-	
+
 	private String state;
-	
+
 	private String zipCode;
-	
+
 	public String getAddressInfo() {
-		return getStreetAddress1() + " " + getStreetAddress2() + ", " + getCity() + ", " + getState() + " " + getZipCode();
+		return getStreetAddress1() + " " + getStreetAddress2() + ", " + getCity() + ", " + getState() + " "
+				+ getZipCode();
 	}
 
 	public String getStreetAddress1() {
@@ -75,5 +76,62 @@ public class Address {
 		return Objects.equals(city, other.city) && Objects.equals(state, other.state)
 				&& Objects.equals(streetAddress1, other.streetAddress1)
 				&& Objects.equals(streetAddress2, other.streetAddress2) && Objects.equals(zipCode, other.zipCode);
+	}
+
+	// construct from builder
+	public Address(AddressBuilder b) {
+		this.streetAddress1 = b.streetAddress1;
+		this.streetAddress2 = b.streetAddress2;
+		this.city = b.city;
+		this.state = b.state;
+		this.zipCode = b.zipCode;
+	}
+
+	public static class AddressBuilder {
+		private String streetAddress1;
+		private String streetAddress2;
+		private String city;
+		private String state;
+		private String zipCode;
+
+		public AddressBuilder() {
+		}
+
+		public AddressBuilder streetAddress1(String streetAddress1) {
+			this.streetAddress1 = streetAddress1;
+			return this;
+		}
+
+		public AddressBuilder streetAddress2(String streetAddress2) {
+			this.streetAddress2 = streetAddress2;
+			return this;
+		}
+
+		public AddressBuilder city(String city) {
+			this.city = city;
+			return this;
+		}
+
+		public AddressBuilder state(String state) {
+			this.state = state;
+			return this;
+		}
+
+		public AddressBuilder zipCode(String zipCode) {
+			this.zipCode = zipCode;
+			return this;
+		}
+
+		public Address build() {
+			return new Address(this);
+		}
+	}
+
+	/*
+	 * Since Address seemed like every field would be required, I only used a
+	 * default builder to construct it from scratch.
+	 */
+	public static AddressBuilder builder() {
+		return new AddressBuilder();
 	}
 }

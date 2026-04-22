@@ -1,7 +1,8 @@
 package commands;
 
-import models.Address;
+import models.Address.AddressBuilder;
 import models.Customer;
+import models.Customer.CustomerBuilder;
 import models.ParkingOffice;
 
 public class RegisterCustomerCommand implements Command {
@@ -44,13 +45,15 @@ public class RegisterCustomerCommand implements Command {
         String addressText = params[1];
         String phoneNumber = params[2];
 
-        Address address = new Address();
-        address.setStreetAddress1(addressText);
+        AddressBuilder addressBuilder = new AddressBuilder();
+        addressBuilder.streetAddress1(addressText);
 
-        Customer customer = new Customer();
-        customer.setName(name);
-        customer.setAddress(address);
-        customer.setPhoneNumber(phoneNumber);
+        CustomerBuilder customerBuilder = new CustomerBuilder();
+        customerBuilder.name(name);
+        customerBuilder.address(addressBuilder.build());
+        customerBuilder.phoneNumber(phoneNumber);
+
+        Customer customer = customerBuilder.build();
 
         this.parkingOffice.register(customer);
 

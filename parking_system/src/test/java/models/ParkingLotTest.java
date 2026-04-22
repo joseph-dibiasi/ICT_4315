@@ -1,17 +1,14 @@
 package models;
 
-import org.junit.jupiter.api.Test;
-
-import models.Address;
-import models.Car;
-import models.Money;
-import models.ParkingLot;
-
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
 
 class ParkingLotTest {
 
@@ -26,7 +23,7 @@ class ParkingLotTest {
     @Test
     void testSetAndGetAddress() {
         ParkingLot lot = new ParkingLot();
-        Address address = new Address();
+        Address address = Address.builder().build();
         address.setCity("New York");
         lot.setAddress(address);
         assertEquals(address, lot.getAddress());
@@ -83,7 +80,7 @@ class ParkingLotTest {
         UUID id = UUID.fromString("11111111-1111-1111-1111-111111111111");
         lot.setLotId(id);
 
-        Address address = new Address();
+        Address address = Address.builder().build();
         address.setStreetAddress1("123 Main St");
         address.setCity("Gotham");
         address.setState("NJ");
@@ -142,7 +139,7 @@ class ParkingLotTest {
     @Test
     void testNotEqualsNullAddress() {
         ParkingLot lot1 = new ParkingLot();
-        lot1.setAddress(new Address());
+        lot1.setAddress(Address.builder().build());
 
         ParkingLot lot2 = new ParkingLot();
         // address remains null
@@ -156,7 +153,7 @@ class ParkingLotTest {
         // address null
 
         ParkingLot lot2 = new ParkingLot();
-        lot2.setAddress(new Address());
+        lot2.setAddress(Address.builder().build());
 
         assertNotEquals(lot1, lot2);
     }

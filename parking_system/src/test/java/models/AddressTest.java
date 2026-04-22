@@ -1,11 +1,9 @@
 package models;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import models.Address;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class AddressTest {
 
@@ -13,7 +11,7 @@ class AddressTest {
 
     @BeforeEach
     void setUp() {
-        address = new Address();
+        address = Address.builder().build();
     }
 
     @Test
@@ -77,14 +75,14 @@ class AddressTest {
 
     @Test
     void testEqualsAndHashCode() {
-        Address a1 = new Address();
+        Address a1 = Address.builder().build();
         a1.setStreetAddress1("123 Main St");
         a1.setCity("A");
         a1.setState("IL");
         a1.setZipCode("12345");
         a1.setStreetAddress2("Apt 1");
 
-        Address a2 = new Address();
+        Address a2 = Address.builder().build();
         a2.setStreetAddress1("123 Main St");
         a2.setCity("A");
         a2.setState("IL");
@@ -97,7 +95,7 @@ class AddressTest {
 
     @Test
     void testNotEqualsDifferentTypeOrNull() {
-        Address a1 = new Address();
+        Address a1 = Address.builder().build();
         a1.setCity("CityX");
 
         assertNotEquals(a1, null);
@@ -106,18 +104,18 @@ class AddressTest {
 
     @Test
     void testEqualsSameObject() {
-        Address a1 = new Address();
+        Address a1 = Address.builder().build();
         a1.setCity("CityX");
         assertEquals(a1, a1);
     }
 
     @Test
     void testNotEqualsDifferentStreetAddress1() {
-        Address a1 = new Address();
+        Address a1 = Address.builder().build();
         a1.setStreetAddress1("123 Main St");
         a1.setCity("City");
 
-        Address a2 = new Address();
+        Address a2 = Address.builder().build();
         a2.setStreetAddress1("456 Main St");
         a2.setCity("City");
 
@@ -126,11 +124,11 @@ class AddressTest {
 
     @Test
     void testNotEqualsDifferentStreetAddress2() {
-        Address a1 = new Address();
+        Address a1 = Address.builder().build();
         a1.setStreetAddress2("Apt 1");
         a1.setCity("City");
 
-        Address a2 = new Address();
+        Address a2 = Address.builder().build();
         a2.setStreetAddress2("Apt 2");
         a2.setCity("City");
 
@@ -139,10 +137,10 @@ class AddressTest {
 
     @Test
     void testNotEqualsDifferentCity() {
-        Address a1 = new Address();
+        Address a1 = Address.builder().build();
         a1.setCity("City1");
 
-        Address a2 = new Address();
+        Address a2 = Address.builder().build();
         a2.setCity("City2");
 
         assertNotEquals(a1, a2);
@@ -150,10 +148,10 @@ class AddressTest {
 
     @Test
     void testNotEqualsDifferentState() {
-        Address a1 = new Address();
+        Address a1 = Address.builder().build();
         a1.setState("IL");
 
-        Address a2 = new Address();
+        Address a2 = Address.builder().build();
         a2.setState("CA");
 
         assertNotEquals(a1, a2);
@@ -161,10 +159,10 @@ class AddressTest {
 
     @Test
     void testNotEqualsDifferentZipCode() {
-        Address a1 = new Address();
+        Address a1 = Address.builder().build();
         a1.setZipCode("12345");
 
-        Address a2 = new Address();
+        Address a2 = Address.builder().build();
         a2.setZipCode("67890");
 
         assertNotEquals(a1, a2);
@@ -172,10 +170,10 @@ class AddressTest {
 
     @Test
     void testNotEqualsNullCity() {
-        Address a1 = new Address();
+        Address a1 = Address.builder().build();
         a1.setCity("City");
 
-        Address a2 = new Address();
+        Address a2 = Address.builder().build();
         // city null
 
         assertNotEquals(a1, a2);
@@ -183,10 +181,10 @@ class AddressTest {
 
     @Test
     void testNotEqualsNullCityReversed() {
-        Address a1 = new Address();
+        Address a1 = Address.builder().build();
         // city null
 
-        Address a2 = new Address();
+        Address a2 = Address.builder().build();
         a2.setCity("City");
 
         assertNotEquals(a1, a2);
@@ -194,10 +192,10 @@ class AddressTest {
 
     @Test
     void testNotEqualsNullState() {
-        Address a1 = new Address();
+        Address a1 = Address.builder().build();
         a1.setState("IL");
 
-        Address a2 = new Address();
+        Address a2 = Address.builder().build();
         // state null
 
         assertNotEquals(a1, a2);
@@ -205,10 +203,10 @@ class AddressTest {
 
     @Test
     void testNotEqualsNullStateReversed() {
-        Address a1 = new Address();
+        Address a1 = Address.builder().build();
         // state null
 
-        Address a2 = new Address();
+        Address a2 = Address.builder().build();
         a2.setState("IL");
 
         assertNotEquals(a1, a2);

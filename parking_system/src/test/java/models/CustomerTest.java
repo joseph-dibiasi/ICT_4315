@@ -1,31 +1,27 @@
 // File: ICT_4305/Week_4/src/test/java/classes/CustomerTest.java
 package models;
 
-import org.junit.jupiter.api.Test;
-
-import models.Address;
-import models.Car;
-import models.Customer;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
 
 class CustomerTest {
 
     @Test
     void testSetAndGetCustomerId() {
-        Customer customer = new Customer();
         UUID id = UUID.randomUUID();
-        customer.setCustomerId(id);
+        Customer customer = Customer.builder(id, "Test").build();
         assertEquals(id, customer.getCustomerId());
     }
 
     @Test
     void testSetAndGetNameAndPhone() {
-        Customer customer = new Customer();
+        Customer customer = Customer.builder(UUID.randomUUID(), "Test").build();
         customer.setName("Alice");
         customer.setPhoneNumber("123-456-7890");
         assertEquals("Alice", customer.getName());
@@ -34,8 +30,8 @@ class CustomerTest {
 
     @Test
     void testSetAndGetAddress() {
-        Customer customer = new Customer();
-        Address address = new Address();
+        Customer customer = Customer.builder(UUID.randomUUID(), "Test").build();
+        Address address = Address.builder().build();
         address.setStreetAddress1("100 Test St");
         address.setCity("CityX");
         customer.setAddress(address);
@@ -45,7 +41,7 @@ class CustomerTest {
 
     @Test
     void testSetAndGetCarsList() {
-        Customer customer = new Customer();
+        Customer customer = Customer.builder(UUID.randomUUID(), "Test").build();
         List<Car> cars = new ArrayList<>();
         Car car = new Car();
         car.setLicense("XYZ-123");
@@ -59,11 +55,11 @@ class CustomerTest {
 
     @Test
     void testToStringContainsNameAndAddressInfo() {
-        Customer customer = new Customer();
+        Customer customer = Customer.builder(UUID.randomUUID(), "Test").build();
         customer.setCustomerId(UUID.fromString("123e4567-e89b-12d3-a456-556642440000"));
         customer.setName("Jane Doe");
 
-        Address address = new Address();
+        Address address = Address.builder().build();
         address.setStreetAddress1("789 Oak Ave");
         address.setStreetAddress2("");
         address.setCity("Gotham");
@@ -82,8 +78,8 @@ class CustomerTest {
 
     @Test
     void testEqualsAndHashCodeConsistency() {
-        Customer c1 = new Customer();
-        Customer c2 = new Customer();
+        Customer c1 = Customer.builder(UUID.randomUUID(), "Test").build();
+        Customer c2 = Customer.builder(UUID.randomUUID(), "Test").build();
 
         UUID id = UUID.randomUUID();
         c1.setCustomerId(id);
@@ -92,7 +88,7 @@ class CustomerTest {
         c1.setName("Sam");
         c2.setName("Sam");
 
-        Address address = new Address();
+        Address address = Address.builder().build();
         address.setCity("A");
         c1.setAddress(address);
         c2.setAddress(address);
@@ -106,7 +102,7 @@ class CustomerTest {
 
     @Test
     void testEqualsSameObjectAndDifferentTypeOrNull() {
-        Customer c1 = new Customer();
+        Customer c1 = Customer.builder(UUID.randomUUID(), "Test").build();
         c1.setName("Sam");
         assertEquals(c1, c1);
         assertNotEquals(c1, null);

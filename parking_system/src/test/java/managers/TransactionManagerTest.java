@@ -152,11 +152,7 @@ class TransactionManagerTest {
         lot.getParkedCars().add(car);
 
         // create an existing charge (entry) and add it to manager's charges
-        ParkingCharge existing = new ParkingCharge();
-        existing.setLotId(lot.getLotId());
-        existing.setPermitId(car.getOwner());
-        existing.setIncurred(Instant.now().minus(2, ChronoUnit.HOURS)); // 2 hours ago
-        existing.setAmount(new Money(0L)); // starting at $0
+        ParkingCharge existing = ParkingCharge.builder(car.getOwner(), lot.getLotId()).incurred(Instant.now().minus(2, ChronoUnit.HOURS)).amount(new Money(0L)).build();
         // add to private charges list
         @SuppressWarnings("unchecked")
         List<ParkingCharge> charges = (List<ParkingCharge>) getPrivateField(tm, "charges");
@@ -223,11 +219,7 @@ class TransactionManagerTest {
 
     @Test
     void testFindParkingChargeByLotIdAndOwnerIdNonMatching() throws Exception {
-        ParkingCharge charge = new ParkingCharge();
-        charge.setLotId(UUID.randomUUID());
-        charge.setPermitId(UUID.randomUUID());
-        charge.setAmount(new Money(100L));
-
+        ParkingCharge charge = ParkingCharge.builder(UUID.randomUUID(), UUID.randomUUID()).amount(new Money(100L)).build();
         @SuppressWarnings("unchecked")
         List<ParkingCharge> charges = (List<ParkingCharge>) getPrivateField(tm, "charges");
         charges.clear();
@@ -263,10 +255,7 @@ class TransactionManagerTest {
         car.setPermitExpiration(LocalDateTime.now().toLocalDate().plusDays(5));
         lot.getParkedCars().add(car);
 
-        ParkingCharge charge = new ParkingCharge();
-        charge.setLotId(lot.getLotId());
-        charge.setPermitId(car.getOwner());
-        charge.setAmount(new Money(100L));
+        ParkingCharge charge = ParkingCharge.builder(car.getOwner(), lot.getLotId()).amount(new Money(100L)).build();
 
         @SuppressWarnings("unchecked")
         List<ParkingCharge> charges = (List<ParkingCharge>) getPrivateField(tm, "charges");
@@ -289,10 +278,7 @@ class TransactionManagerTest {
         car.setPermit("P");
         car.setPermitExpiration(LocalDateTime.now().toLocalDate().plusDays(5));
 
-        ParkingCharge charge = new ParkingCharge();
-        charge.setLotId(lot.getLotId());
-        charge.setPermitId(car.getOwner());
-        charge.setAmount(new Money(100L));
+        ParkingCharge charge = ParkingCharge.builder(car.getOwner(), lot.getLotId()).amount(new Money(100L)).build();
 
         @SuppressWarnings("unchecked")
         List<ParkingCharge> charges = (List<ParkingCharge>) getPrivateField(tm, "charges");
@@ -315,11 +301,7 @@ class TransactionManagerTest {
         car.setPermit("P");
         car.setPermitExpiration(LocalDateTime.now().toLocalDate().plusDays(5));
 
-        ParkingCharge charge = new ParkingCharge();
-        charge.setLotId(lot.getLotId());
-        charge.setPermitId(car.getOwner());
-        charge.setAmount(new Money(0L));
-        charge.setIncurred(Instant.now().minus(1, ChronoUnit.HOURS));
+        ParkingCharge charge = ParkingCharge.builder(car.getOwner(), lot.getLotId()).amount(new Money(0L)).incurred(Instant.now().minus(1, ChronoUnit.HOURS)).build();
 
         @SuppressWarnings("unchecked")
         List<ParkingCharge> charges = (List<ParkingCharge>) getPrivateField(tm, "charges");
@@ -347,11 +329,7 @@ class TransactionManagerTest {
         car.setPermitExpiration(LocalDateTime.now().toLocalDate().plusDays(2));
         lot.getParkedCars().add(car);
 
-        ParkingCharge existing = new ParkingCharge();
-        existing.setLotId(lot.getLotId());
-        existing.setPermitId(car.getOwner());
-        existing.setIncurred(Instant.now().plus(2, ChronoUnit.HOURS));
-        existing.setAmount(new Money(0L));
+        ParkingCharge existing = ParkingCharge.builder(car.getOwner(), lot.getLotId()).amount(new Money(0L)).incurred(Instant.now().plus(2, ChronoUnit.HOURS)).build();
 
         @SuppressWarnings("unchecked")
         List<ParkingCharge> charges = (List<ParkingCharge>) getPrivateField(tm, "charges");
@@ -402,15 +380,13 @@ class TransactionManagerTest {
     @Test
     void testAddChargeAndAddChargeThrowsWhenNullAmount() {
         // normal add
-        ParkingCharge charge = new ParkingCharge();
-        charge.setAmount(new Money(100L)); // $1
+        ParkingCharge charge = ParkingCharge.builder().amount(new Money(100L)).build();
         Money lotFee = new Money(200L); // $2
         Money updated = tm.addCharge(charge, lotFee);
         assertEquals(300L, updated.getCents());
 
         // error path: parkingCharge.getAmount() null
-        ParkingCharge bad = new ParkingCharge();
-        bad.setAmount(null);
+        ParkingCharge bad = ParkingCharge.builder().amount(null).build();
         RuntimeException ex = assertThrows(RuntimeException.class, () -> tm.addCharge(bad, lotFee));
         assertTrue(ex.getMessage().contains("Failed to Process Parking Charge"));
     }
@@ -420,13 +396,9 @@ class TransactionManagerTest {
         UUID ownerId = UUID.randomUUID();
 
         // create charges for owner: $1.00 and $2.00
-        ParkingCharge c1 = new ParkingCharge();
-        c1.setPermitId(ownerId);
-        c1.setAmount(new Money(100L));
+        ParkingCharge c1 = ParkingCharge.builder().permitId(ownerId).amount(new Money(100L)).build();
 
-        ParkingCharge c2 = new ParkingCharge();
-        c2.setPermitId(ownerId);
-        c2.setAmount(new Money(200L));
+        ParkingCharge c2 = ParkingCharge.builder().permitId(ownerId).amount(new Money(200L)).build();
 
         @SuppressWarnings("unchecked")
         List<ParkingCharge> charges = (List<ParkingCharge>) getPrivateField(tm, "charges");
@@ -442,11 +414,8 @@ class TransactionManagerTest {
         assertEquals(3.0, total, 0.0001);
 
         // calculateCustomerMonthlyBill: prepare customer with cars
-        Customer cust = new Customer();
-        cust.setCustomerId(ownerId);
-        cust.setName("Cust");
-        Address a = new Address();
-        a.setStreetAddress1("Addr");
+        Customer cust = Customer.builder(ownerId, "Cust").build();
+        Address a = Address.builder().streetAddress1("Addr").build();
         cust.setAddress(a);
         List<Car> cars = new ArrayList<>();
         cars.add(car);
@@ -462,10 +431,11 @@ class TransactionManagerTest {
 
     @Test
     void testCalculateCustomerMonthlyBillThrowsOnNullCars() {
-        Customer cust = new Customer();
+        Customer cust = Customer.builder(UUID.randomUUID(), "Test").build();
         cust.setCustomerId(UUID.randomUUID());
         cust.setName("X");
-        cust.setAddress(new Address());
+        Address a = Address.builder().streetAddress1("Addr").build();
+        cust.setAddress(a);
         cust.setCars(null); // will cause NPE inside method and be wrapped
 
         RuntimeException ex = assertThrows(RuntimeException.class, () ->
@@ -476,20 +446,18 @@ class TransactionManagerTest {
 
     @Test
     void testFindAndRemoveParkingChargesByOwnerId() throws Exception {
-        UUID a = UUID.randomUUID();
-        ParkingCharge p = new ParkingCharge();
-        p.setPermitId(a);
-        p.setAmount(new Money(50L));
+        UUID permitId = UUID.randomUUID();
+        ParkingCharge p = ParkingCharge.builder(permitId, UUID.randomUUID()).amount(new Money(50L)).build();
 
         @SuppressWarnings("unchecked")
         List<ParkingCharge> charges = (List<ParkingCharge>) getPrivateField(tm, "charges");
         charges.clear();
         charges.add(p);
 
-        List<ParkingCharge> found = tm.findParkingChargesByOwnerId(a);
+        List<ParkingCharge> found = tm.findParkingChargesByOwnerId(permitId);
         assertEquals(1, found.size());
 
-        boolean removed = tm.removeParkingChargesByOwnerId(a);
+        boolean removed = tm.removeParkingChargesByOwnerId(permitId);
         assertTrue(removed);
         assertTrue(((List<?>) getPrivateField(tm, "charges")).isEmpty());
     }

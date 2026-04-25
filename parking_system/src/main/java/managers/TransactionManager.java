@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import dtos.ParkingStrategyDTO;
+import factories.ParkingChargeStrategyFactory;
 import models.Car;
 import models.Customer;
 import models.Money;
@@ -19,12 +21,43 @@ import strategies.ParkingStrategy;
  * This is the class that manages all the parking transactions.
  */
 public class TransactionManager {
-    private List<ParkingCharge> charges;   
+	private List<ParkingCharge> charges;
 
-    public TransactionManager() {
-        this.charges = new ArrayList<>();
-    }
-    
+	public TransactionManager() {
+		this.charges = new ArrayList<>();
+	}
+
+	/**
+	 * Replace the strategies on the given ParkingLot with the provided list of
+	 * strategies created via the factory. StrategyDTO contains StrategyType which
+	 * dictates which factory is used to build the strategy. StrategyConfig contains
+	 * the information needed to configure the built strategy. At the moment,
+	 * assigning lot strategies is done wholesale; assigning new strategies replaces
+	 * all existing strategies. Passing in no strategies functions as a removal
+	 * feature. As the project continues, this is an area targeted for enhancement.
+	 * It may be desirable to add/remove/modify specific strategies without
+	 * affecting the rest.
+	 */
+	public void assignStrategies(ParkingLot lot, List<ParkingStrategyDTO> strategyDTOs) {
+		if (lot == null) {
+			throw new IllegalArgumentException("ParkingLot cannot be null");
+		}
+
+		if (lot.getStrategies() != null) {
+			// Clear existing strategies before assigning new ones.
+			lot.getStrategies().clear();
+		}
+
+		List<ParkingStrategy> newStrategies = new ArrayList<>();
+
+		for (ParkingStrategyDTO parkingStrategyDTO : strategyDTOs) {
+			newStrategies.add(ParkingChargeStrategyFactory.createStrategy(parkingStrategyDTO.getStrategyType(),
+					parkingStrategyDTO.getStrategyConfig()));
+		}
+
+		lot.setStrategies(newStrategies);
+	}
+
 	/*
 	 * This method is responsible for creating the entry ParkingFee object for each
 	 * car, but there are several validations that need to be done first. If any
@@ -70,66 +103,67 @@ public class TransactionManager {
 	 */
 	public ParkingCharge leave(Instant exitTime, ParkingLot lot, Car car) {
 		ParkingCharge charge;
-			if (lot.getChargeOnExit()) {
-				charge = this.findParkingChargeByLotIdAndPermitId(lot.getLotId(), car.getOwner());
-				if (charge == null) {
-					throw new RuntimeException("Parking Charge Not found! Unable to Calculate Hourly Rate.");
-				}
-				Instant entryTime = charge.getIncurred();
-
-				long hoursBetween = ChronoUnit.HOURS.between(entryTime, exitTime);
-				if (hoursBetween < 0) {
-					throw new RuntimeException("Invalid parking time detected.");
-				}
-
-				ParkingCharge calculatedCharge = calculateParkingCharge(lot, car, entryTime, exitTime);
-				charge.setAmount(calculatedCharge.getAmount());
-				charge.setIncurred(null);
-				lot.getParkedCars().remove(car);
-			} else {
-				ParkingChargeBuilder parkingChargeBuilder = new ParkingChargeBuilder();
-				charge = parkingChargeBuilder.build();
-				lot.getParkedCars().remove(car);
+		if (lot.getChargeOnExit()) {
+			charge = this.findParkingChargeByLotIdAndPermitId(lot.getLotId(), car.getOwner());
+			if (charge == null) {
+				throw new RuntimeException("Parking Charge Not found! Unable to Calculate Hourly Rate.");
 			}
+			Instant entryTime = charge.getIncurred();
+
+			long hoursBetween = ChronoUnit.HOURS.between(entryTime, exitTime);
+			if (hoursBetween < 0) {
+				throw new RuntimeException("Invalid parking time detected.");
+			}
+
+			ParkingCharge calculatedCharge = calculateParkingCharge(lot, car, entryTime, exitTime);
+			charge.setAmount(calculatedCharge.getAmount());
+			charge.setIncurred(null);
+			lot.getParkedCars().remove(car);
+		} else {
+			ParkingChargeBuilder parkingChargeBuilder = new ParkingChargeBuilder();
+			charge = parkingChargeBuilder.build();
+			lot.getParkedCars().remove(car);
+		}
 		return charge;
 	}
-	
+
 	public ParkingCharge calculateParkingCharge(ParkingLot lot, Car car, Instant entryTime, Instant exitTime) {
 		ParkingChargeBuilder parkingChargeBuilder = new ParkingChargeBuilder(car.getOwner(), lot.getLotId());
-		
+
 		Money amount;
-			amount = calculateBaseCharge(lot, car, entryTime, exitTime);
-			for (ParkingStrategy adj : lot.getStrategies()) {
-				amount = adj.adjustCharge(amount, lot, car, entryTime, exitTime);
-			}
-		
+		amount = calculateBaseCharge(lot, car, entryTime, exitTime);
+		for (ParkingStrategy adj : lot.getStrategies()) {
+			amount = adj.adjustCharge(amount, lot, car, entryTime, exitTime);
+		}
+
 		parkingChargeBuilder.amount(amount);
 		if (exitTime != null) {
 			parkingChargeBuilder.incurred(entryTime);
 		}
 		return parkingChargeBuilder.build();
 	};
-	
-    public Money calculateBaseCharge(ParkingLot parkingLot, Car car, Instant entryTime, Instant exitTime) {
-        if (exitTime == null) {
-            // Entry
-            if (parkingLot.getChargeOnExit()) {
-                return new Money(0L);
-            } else {
-                return parkingLot.getLotFee();
-            }
-        } else {
-            // Exit
-            if (parkingLot.getChargeOnExit()) {
-                long hours = ChronoUnit.HOURS.between(entryTime, exitTime);
-                if (hours < 1) hours = 1;
-                return new Money(parkingLot.getLotFee().getDollars() * hours);
-            } else {
-                return parkingLot.getLotFee();
-            }
-        }
-    }
-	
+
+	public Money calculateBaseCharge(ParkingLot parkingLot, Car car, Instant entryTime, Instant exitTime) {
+		if (exitTime == null) {
+			// Entry
+			if (parkingLot.getChargeOnExit()) {
+				return new Money(0L);
+			} else {
+				return parkingLot.getLotFee();
+			}
+		} else {
+			// Exit
+			if (parkingLot.getChargeOnExit()) {
+				long hours = ChronoUnit.HOURS.between(entryTime, exitTime);
+				if (hours < 1)
+					hours = 1;
+				return new Money(parkingLot.getLotFee().getDollars() * hours);
+			} else {
+				return parkingLot.getLotFee();
+			}
+		}
+	}
+
 	/*
 	 * Upon entering a parking lot for the first time, a parking charge will be
 	 * created for a car in relation to that lot. If it is an hourly lot there will
@@ -161,11 +195,11 @@ public class TransactionManager {
 			}
 			charge = parkingChargeBuilder.build();
 		}
-		
+
 		return charge;
 
 	}
-	
+
 	/*
 	 * There is only a single ParkingCharge per permit per lot. LotId and OwnerId
 	 * are both unique identifiers pertaining to Parking Lots and Car Permits. Using
@@ -181,7 +215,6 @@ public class TransactionManager {
 		return findParkingChargeByLotIdAndPermitId(lotId, ownerId);
 	}
 
-
 	/*
 	 * Using a nightly batch process, this method would be called at midnight to
 	 * update the fees for any car still parked in a daily rate parking lot.
@@ -193,14 +226,14 @@ public class TransactionManager {
 				Money additionalCharge = calculateParkingCharge(lot, car, Instant.now(), null).getAmount();
 				charge.setAmount(addCharge(charge, additionalCharge));
 			}
-		}		
+		}
 	}
 
 	/*
 	 * This method would be called for each car when the University Parking Office
 	 * calculates the monthly bill for customers. Since customers can register
-	 * multiple cars, the total bill for each car is calculated separately, 
-	 * this is a hold-over from when compact cars were guaranteed a discounted rate.
+	 * multiple cars, the total bill for each car is calculated separately, this is
+	 * a hold-over from when compact cars were guaranteed a discounted rate.
 	 */
 	public Double calculatePermitBill(Car car) {
 		Double total = 0.0;
@@ -239,16 +272,15 @@ public class TransactionManager {
 			throw new RuntimeException("Failed to Process Customer Monthly Bill: " + e.getMessage());
 		}
 	}
-	
+
 	/*
 	 * Returns updated charge. Used only for Daily Rate lots.
 	 */
-	public Money addCharge(ParkingCharge parkingCharge, Money lotFee ) {
+	public Money addCharge(ParkingCharge parkingCharge, Money lotFee) {
 
 		try {
 			Double currentParkingLotChargesInDollars = parkingCharge.getAmount().getDollars();
-			Double updatedParkingLotChargesInDollars = currentParkingLotChargesInDollars
-					+ lotFee.getDollars();
+			Double updatedParkingLotChargesInDollars = currentParkingLotChargesInDollars + lotFee.getDollars();
 
 			Money chargeAmount = new Money(updatedParkingLotChargesInDollars);
 			return chargeAmount;

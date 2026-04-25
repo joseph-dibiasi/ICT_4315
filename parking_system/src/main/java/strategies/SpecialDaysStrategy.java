@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
 
+import factories.StrategyFactoryConfig;
 import models.Car;
 import models.Money;
 import models.ParkingLot;
@@ -13,7 +14,7 @@ public class SpecialDaysStrategy implements ParkingStrategy {
     private Double rateModifier;
     private List<Integer> specialDays;
 
-    public SpecialDaysStrategy(StrategyConfig config) {
+    public SpecialDaysStrategy(StrategyFactoryConfig config) {
     	this.rateModifier = config.getRateModifier();
     	this.specialDays = config.getSpecialDays();
     }
@@ -27,7 +28,8 @@ public class SpecialDaysStrategy implements ParkingStrategy {
     public Money adjustCharge(Money currentCharge, ParkingLot parkingLot, Car car, Instant entryTime, Instant exitTime) {
         Instant time = entryTime != null ? entryTime : exitTime;
         if (time != null && isSpecialDay(time)) {
-            return new Money(currentCharge.getDollars() * (1.0 - rateModifier));
+            // rateModifier is a multiplier (e.g. 1.2 = 20% surcharge, 0.8 = 20% discount)
+            return new Money(currentCharge.getDollars() * rateModifier);
         }
         return currentCharge;
     }

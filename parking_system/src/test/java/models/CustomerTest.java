@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
@@ -107,5 +108,20 @@ class CustomerTest {
         assertEquals(c1, c1);
         assertNotEquals(c1, null);
         assertNotEquals(c1, "not a customer");
+    }
+    
+    @Test
+    void customerBuilderAndEquals() {
+        UUID id = UUID.randomUUID();
+        Address a = Address.builder().streetAddress1("Addr").build();
+        List<Car> cars = new ArrayList<>();
+
+        Customer c1 = Customer.builder().customerId(id).name("Joe").address(a).phoneNumber("123").cars(cars).build();
+        Customer c2 = Customer.builder().customerId(id).name("Joe").address(a).phoneNumber("123").cars(cars).build();
+
+        assertTrue(c1.equals(c2));
+
+        c2.setPhoneNumber("999");
+        assertFalse(c1.equals(c2));
     }
 }

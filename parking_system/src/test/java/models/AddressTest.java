@@ -211,4 +211,10 @@ class AddressTest {
 
         assertNotEquals(a1, a2);
     }
+    
+    @Test
+    void addressBuilderStreetAddress2() {
+        Address a = Address.builder().streetAddress1("1 Main").streetAddress2("Apt 2").city("Town").state("ST").zipCode("12345").build();
+        assertEquals("Apt 2", a.getStreetAddress2());
+    }
 }

@@ -3,8 +3,8 @@ package strategies;
 import java.time.Instant;
 import java.time.LocalTime;
 import java.time.ZoneId;
-import java.util.List;
 
+import factories.StrategyFactoryConfig;
 import models.Car;
 import models.Money;
 import models.ParkingLot;
@@ -14,7 +14,7 @@ public class TimeOfDayStrategy implements ParkingStrategy {
     private Double rateModifier;
     private Instant[] timeOfDayRange;
 
-    public TimeOfDayStrategy(StrategyConfig config) {
+    public TimeOfDayStrategy(StrategyFactoryConfig config) {
 		this.rateModifier = config.getRateModifier();
 		this.timeOfDayRange = config.getTimeOfDayRange();
 	}
@@ -30,13 +30,11 @@ public class TimeOfDayStrategy implements ParkingStrategy {
     public Money adjustCharge(Money currentCharge, ParkingLot parkingLot, Car car, Instant entryTime, Instant exitTime) {
         Instant time = entryTime != null ? entryTime : exitTime;
         if (time == null) return currentCharge;
-
-        double multiplier = 1.0;
         if (isPeakTime(time)) {
-            multiplier += rateModifier;
+            // rateModifier is a multiplier (e.g. 1.2 = 20% surcharge, 0.8 = 20% discount)
+            return new Money(currentCharge.getDollars() * rateModifier);
         }
-        
-        return new Money(currentCharge.getDollars() * multiplier);
+        return currentCharge;
     }
 
     private boolean isPeakTime(Instant time) {

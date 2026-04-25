@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
 
+import factories.StrategyFactoryConfig;
 import models.Car;
 import models.Money;
 import models.ParkingLot;
@@ -14,7 +15,7 @@ public class DayOfWeekStrategy implements ParkingStrategy {
     private Double rateModifier;
     private List<DayOfWeek> applicableDays;
 
-    public DayOfWeekStrategy(StrategyConfig config) {
+    public DayOfWeekStrategy(StrategyFactoryConfig config) {
 		this.rateModifier = config.getRateModifier();
 		this.applicableDays = config.getDaysOfWeek();
 	}
@@ -31,6 +32,7 @@ public class DayOfWeekStrategy implements ParkingStrategy {
         if (time != null) {
             DayOfWeek day = time.atZone(ZoneId.systemDefault()).getDayOfWeek();
             if (applicableDays.contains(day)) {
+                // rateModifier is a multiplier (e.g. 1.2 = 20% surcharge, 0.8 = 20% discount)
                 return new Money(currentCharge.getDollars() * rateModifier);
             }
         }

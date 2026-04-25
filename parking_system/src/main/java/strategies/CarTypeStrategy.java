@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.List;
 
 import enums.CarType;
+import factories.StrategyFactoryConfig;
 import models.Car;
 import models.Money;
 import models.ParkingLot;
@@ -13,7 +14,7 @@ public class CarTypeStrategy implements ParkingStrategy {
     private Double rateModifier;
     private List<CarType> applicableCarTypes;
 
-    public CarTypeStrategy(StrategyConfig config) {
+    public CarTypeStrategy(StrategyFactoryConfig config) {
 		this.rateModifier = config.getRateModifier();
 		this.applicableCarTypes = config.getCarTypes();
 	}
@@ -27,6 +28,7 @@ public class CarTypeStrategy implements ParkingStrategy {
     public Money adjustCharge(Money currentCharge, ParkingLot parkingLot, Car car, Instant entryTime, Instant exitTime) {
 
         if (applicableCarTypes.contains(car.getType())) {
+        // rateModifier is a multiplier (e.g. 1.2 = 20% surcharge, 0.8 = 20% discount)
             return new Money(currentCharge.getDollars() * rateModifier);
         } else {
             return currentCharge;

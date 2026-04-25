@@ -1,3 +1,4 @@
+// File: `ICT_4315/parking_system/src/test/java/strategies/CarTypeStrategyTest.java`
 package strategies;
 
 import java.time.Instant;
@@ -6,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 
 import enums.CarType;
+import factories.StrategyFactoryConfig;
 import managers.TransactionManager;
 import models.Car;
 import models.ParkingCharge;
@@ -21,9 +23,17 @@ class CarTypeStrategyTest {
         return StrategyTestHelper.createCar(type);
     }
 
+    private CarTypeStrategy defaultCompactStrategy() {
+        StrategyFactoryConfig cfg = StrategyFactoryConfig.builder()
+                .rateModifier(0.8)
+                .carTypes(java.util.List.of(CarType.COMPACT))
+                .build();
+        return new CarTypeStrategy(cfg);
+    }
+
     @Test
     void entryDailyCompactShouldUseDiscountedDailyRate() {
-        ParkingLot lot = StrategyTestHelper.createLot(false, 20.0, new CarTypeStrategy());
+        ParkingLot lot = StrategyTestHelper.createLot(false, 20.0, defaultCompactStrategy());
         TransactionManager manager = StrategyTestHelper.createManager();
 
         ParkingCharge charge = manager.calculateParkingCharge(lot, createCar(CarType.COMPACT), toInstant(2026, 4, 18, 10, 0), null);
@@ -33,7 +43,7 @@ class CarTypeStrategyTest {
 
     @Test
     void entryDailySuvShouldUseStandardDailyRate() {
-        ParkingLot lot = StrategyTestHelper.createLot(false, 20.0, new CarTypeStrategy());
+        ParkingLot lot = StrategyTestHelper.createLot(false, 20.0, defaultCompactStrategy());
         TransactionManager manager = StrategyTestHelper.createManager();
 
         ParkingCharge charge = manager.calculateParkingCharge(lot, createCar(CarType.SUV), toInstant(2026, 4, 18, 10, 0), null);
@@ -43,7 +53,7 @@ class CarTypeStrategyTest {
 
     @Test
     void exitHourlyCompactShouldChargeDiscountedHourlyRate() {
-        ParkingLot lot = StrategyTestHelper.createLot(true, 2.0, new CarTypeStrategy());
+        ParkingLot lot = StrategyTestHelper.createLot(true, 2.0, defaultCompactStrategy());
         TransactionManager manager = StrategyTestHelper.createManager();
 
         Instant entry = toInstant(2026, 4, 18, 9, 0);
@@ -55,7 +65,7 @@ class CarTypeStrategyTest {
 
     @Test
     void exitHourlySuvShouldChargeStandardHourlyRate() {
-        ParkingLot lot = StrategyTestHelper.createLot(true, 2.0, new CarTypeStrategy());
+        ParkingLot lot = StrategyTestHelper.createLot(true, 2.0, defaultCompactStrategy());
         TransactionManager manager = StrategyTestHelper.createManager();
 
         Instant entry = toInstant(2026, 4, 18, 9, 0);
@@ -67,7 +77,11 @@ class CarTypeStrategyTest {
 
     @Test
     void accessorsShouldWork() {
-        CarTypeStrategy s = new CarTypeStrategy();
+        StrategyFactoryConfig cfg = StrategyFactoryConfig.builder()
+                .rateModifier(0.8)
+                .carTypes(java.util.List.of(CarType.COMPACT))
+                .build();
+        CarTypeStrategy s = new CarTypeStrategy(cfg);
         s.setRateModifier(0.85);
         assertEquals(0.85, s.getRateModifier(), 0.0001);
     }

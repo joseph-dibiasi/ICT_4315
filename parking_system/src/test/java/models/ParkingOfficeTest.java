@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 
 import enums.CarType;
 import managers.PermitManager;
@@ -202,52 +203,6 @@ class ParkingOfficeTest {
         assertNotNull(office.getLots());
         assertTrue(office.getCustomers().isEmpty());
         assertTrue(office.getLots().isEmpty());
-    }
-
-    @Test
-    void testParkDelegatesToTransactionManager() {
-        UUID customerId = UUID.randomUUID();
-        Customer customer = Customer.builder(customerId, "Alice").address(createTestAddress()).phoneNumber("555-1234").build();
-        List<Car> cars = new ArrayList<>();
-        customer.setCars(cars);
-        parkingOffice.setCustomers(List.of(customer));
-
-        Car car = new Car();
-        car.setOwner(customerId);
-        car.setLicense("ABC-123");
-        car.setType(CarType.COMPACT);
-        car.setPermit("Alice");
-        car.setPermitExpiration(LocalDateTime.now().toLocalDate().plusDays(10));
-
-        ParkingLot lot = new ParkingLot();
-        lot.setLotId(UUID.randomUUID());
-        lot.setCapacity(10);
-        lot.setParkedCars(new HashSet<>());
-        lot.setChargeOnExit(false);
-        lot.setLotFee(new Money(200L));
-
-        ParkingCharge charge = parkingOffice.park(LocalDateTime.now(), lot, car);
-        assertNotNull(charge);
-        assertTrue(lot.getParkedCars().contains(car));
-    }
-
-    @Test
-    void testParkThrowsForUnknownCustomer() {
-        Car car = new Car();
-        car.setOwner(UUID.randomUUID());
-        car.setPermit("P");
-
-        ParkingLot lot = new ParkingLot();
-        lot.setLotId(UUID.randomUUID());
-        lot.setCapacity(10);
-        lot.setParkedCars(new HashSet<>());
-        lot.setChargeOnExit(false);
-        lot.setLotFee(new Money(200L));
-
-        RuntimeException ex = assertThrows(RuntimeException.class, () ->
-            parkingOffice.park(LocalDateTime.now(), lot, car)
-        );
-        assertTrue(ex.getMessage().contains("Unknown car owner"));
     }
 
     @Test
@@ -487,6 +442,86 @@ class ParkingOfficeTest {
         assertEquals(2, ids.size());
     }
 
+    @Test
+    public void testSetLotsRegistersObserversAndNotifiesTransactionManager() {
+        TransactionManager tm = mock(TransactionManager.class);
+        ParkingCharge charge = ParkingCharge.builder().build();
+        when(tm.park(any())).thenReturn(charge);
 
+        ParkingOffice office = new ParkingOffice(new PermitManager(), tm);
+
+        ParkingLot lot = new ParkingLot();
+        lot.setLotId(UUID.randomUUID());
+        office.setLots(List.of(lot));
+
+        Car car = new Car();
+        car.setOwner(UUID.randomUUID());
+        ParkingEvent event = new ParkingEvent(models.ParkingEvent.EventType.ENTRY, LocalDateTime.now(), lot, car);
+
+        ParkingCharge returned = lot.notifyObservers(event);
+        assertEquals(charge, returned);
+        verify(tm).park(any());
+    }
+    
+    @Test
+    public void testSetLotsNull() {
+    	TransactionManager tm = mock(TransactionManager.class);
+    	ParkingCharge charge = ParkingCharge.builder().build();
+    	when(tm.park(any())).thenReturn(charge);
+    	
+    	ParkingOffice office = new ParkingOffice(new PermitManager(), tm);
+    	
+    	ParkingLot lot = new ParkingLot();
+    	lot.setLotId(UUID.randomUUID());
+    	office.setLots(null);
+        assertTrue(office.getLots().isEmpty());
+
+    }
+
+    
+    @Test
+    public void testSetLotsWhenTransactionManagerNull_doesNotRegisterObservers() throws Exception {
+        ParkingOffice office = new ParkingOffice(new PermitManager(), new TransactionManager());
+        // set transactionManager to null via reflection to exercise the branch
+        java.lang.reflect.Field f = office.getClass().getDeclaredField("transactionManager");
+        f.setAccessible(true);
+        f.set(office, null);
+
+        ParkingLot lot = new ParkingLot();
+        lot.setLotId(UUID.randomUUID());
+        office.setLots(List.of(lot));
+
+        Car car = new Car();
+        ParkingEvent event = new ParkingEvent(models.ParkingEvent.EventType.ENTRY, LocalDateTime.now(), lot, car);
+
+        // since transactionManager was null, setLots should NOT have registered observers -> notifyObservers should throw
+        assertThrows(IllegalArgumentException.class, () -> lot.notifyObservers(event));
+    }
+
+    @Test
+    public void testParkAddsCarLocallyWhenObserversReturnNull() {
+        UUID custId = UUID.randomUUID();
+        Customer customer = Customer.builder(custId, "Owner").build();
+        parkingOffice.setCustomers(List.of(customer));
+
+        Car car = new Car();
+        car.setOwner(custId);
+        car.setPermit("P");
+        car.setPermitExpiration(LocalDateTime.now().toLocalDate().plusDays(1));
+
+        ParkingLot lot = new ParkingLot();
+        // observer returns null -> lot should add car locally
+        observers.ParkingAction noop = new observers.ParkingAction() {
+            @Override
+            public ParkingCharge update(ParkingEvent event) {
+                return null;
+            }
+        };
+        lot.addObserver(noop);
+
+        ParkingCharge ch = parkingOffice.park(lot, car);
+        assertNull(ch);
+        assertTrue(lot.getParkedCars().contains(car));
+    }
 
 }

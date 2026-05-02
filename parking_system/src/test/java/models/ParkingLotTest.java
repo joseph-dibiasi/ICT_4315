@@ -1,6 +1,8 @@
 package models;
 
 import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -11,10 +13,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 import factories.StrategyFactoryConfig;
+import models.ParkingEvent.EventType;
 import strategies.DayOfWeekStrategy;
 
 class ParkingLotTest {
@@ -222,6 +227,216 @@ class ParkingLotTest {
                 .daysOfWeek(List.of(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY))
                 .build();
         return new DayOfWeekStrategy(cfg);
+    }
+    
+    @Test
+    public void notifyObserversThrowsWhenNoneRegistered() {
+        ParkingLot lot = new ParkingLot();
+        Car car = new Car();
+        ParkingEvent event = new ParkingEvent(EventType.ENTRY, LocalDateTime.now(), lot, car);
+        assertThrows(IllegalArgumentException.class, () -> lot.notifyObservers(event));
+    }
+
+    @Test
+    public void addObserver_notify_then_removeObserver_behaviour() {
+        ParkingLot lot = new ParkingLot();
+        Car car = new Car();
+        car.setOwner(UUID.randomUUID());
+        car.setPermit("P");
+        car.setPermitExpiration(LocalDate.now().plusDays(1));
+
+        observers.ParkingAction obs = new observers.ParkingAction() {
+            @Override
+            public ParkingCharge update(ParkingEvent event) {
+                return ParkingCharge.builder(car.getOwner(), UUID.randomUUID()).amount(new Money(500L)).build();
+            }
+        };
+
+        // add observer and ensure notifyObservers returns a charge
+        lot.addObserver(obs);
+        ParkingEvent event = new ParkingEvent(EventType.ENTRY, LocalDateTime.now(), lot, car);
+        ParkingCharge returned = lot.notifyObservers(event);
+        assertNotNull(returned);
+
+        // remove observer and notifyObservers should now return null (no observers producing a charge)
+        lot.removeObserver(obs);
+        // observers list remains but no one returns a charge -> notifyObservers returns null
+        ParkingCharge afterRemove = lot.notifyObservers(event);
+        assertNull(afterRemove);
+    }
+
+    @Test
+    public void park_withObserverReturningNull_addsCarLocally() {
+        ParkingLot lot = new ParkingLot();
+        Car car = new Car();
+        car.setOwner(UUID.randomUUID());
+        car.setPermit("X");
+        car.setPermitExpiration(LocalDate.now().plusDays(1));
+
+        // observer that does nothing (returns null)
+        observers.ParkingAction noop = new observers.ParkingAction() {
+            @Override
+            public ParkingCharge update(ParkingEvent event) {
+                return null;
+            }
+        };
+
+        lot.addObserver(noop);
+        ParkingCharge charge = lot.park(LocalDateTime.now(), car);
+        assertNull(charge);
+        assertTrue(lot.getParkedCars().contains(car));
+    }
+
+    @Test
+    public void park_nullCar_throws() {
+        ParkingLot lot = new ParkingLot();
+        assertThrows(IllegalArgumentException.class, () -> lot.park((Car) null));
+    }
+
+    @Test
+    public void removeObserver_noObservers_doesNotThrow() {
+        ParkingLot lot = new ParkingLot();
+        // initial observers list is null; removing should be a no-op
+        lot.removeObserver(null);
+    }
+
+    @Test
+    public void addObserver_null_doesNotInitializeObservers() {
+        ParkingLot lot = new ParkingLot();
+        lot.addObserver(null);
+        Car car = new Car();
+        ParkingEvent event = new ParkingEvent(EventType.ENTRY, LocalDateTime.now(), lot, car);
+        assertThrows(IllegalArgumentException.class, () -> lot.notifyObservers(event));
+    }
+
+    @Test
+    public void multipleObservers_firstNull_thenSecondReturnsCharge() {
+        ParkingLot lot = new ParkingLot();
+        Car car = new Car();
+        car.setOwner(UUID.randomUUID());
+        car.setPermit("M");
+        car.setPermitExpiration(LocalDate.now().plusDays(1));
+
+        observers.ParkingAction first = (event) -> null;
+        observers.ParkingAction second = (event) -> ParkingCharge.builder(car.getOwner(), UUID.randomUUID()).amount(new Money(700L)).build();
+
+        lot.addObserver(first);
+        lot.addObserver(second);
+
+        ParkingCharge charge = lot.notifyObservers(new ParkingEvent(EventType.ENTRY, LocalDateTime.now(), lot, car));
+        assertNotNull(charge);
+        assertEquals(700L, charge.getAmount().getCents());
+    }
+
+    @Test
+    public void park_withNullDate_throws() {
+        ParkingLot lot = new ParkingLot();
+        Car car = new Car();
+        assertThrows(IllegalArgumentException.class, () -> lot.park((LocalDateTime) null, car));
+    }
+    
+    
+    @Test
+    public void park_withNullCar_throws() {
+        ParkingLot lot = new ParkingLot();
+        assertThrows(IllegalArgumentException.class, () -> lot.park(LocalDateTime.now(), null));
+    }
+
+    @Test
+    public void park_withDate_andObserverReturningCharge_doesNotAddCar() {
+        ParkingLot lot = new ParkingLot();
+        Car car = new Car();
+        car.setOwner(UUID.randomUUID());
+        car.setPermit("D");
+        car.setPermitExpiration(LocalDate.now().plusDays(1));
+
+        observers.ParkingAction obs = (event) -> ParkingCharge.builder(car.getOwner(), UUID.randomUUID()).amount(new Money(800L)).build();
+        lot.addObserver(obs);
+
+        LocalDateTime dt = LocalDateTime.now();
+        ParkingCharge ch = lot.park(dt, car);
+        assertNotNull(ch);
+        assertFalse(lot.getParkedCars().contains(car));
+    }
+
+    @Test
+    public void leave_withObserverReturningNull_removesCarLocally() {
+        ParkingLot lot = new ParkingLot();
+        Car car = new Car();
+        car.setOwner(UUID.randomUUID());
+        car.setPermit("L");
+        car.setPermitExpiration(LocalDate.now().plusDays(1));
+
+        // ensure car is parked locally
+        lot.getParkedCars().add(car);
+
+        observers.ParkingAction noop = (event) -> null;
+        lot.addObserver(noop);
+
+        ParkingCharge out = lot.leave(LocalDateTime.now(), car);
+        assertNull(out);
+        assertFalse(lot.getParkedCars().contains(car));
+    }
+    
+    @Test
+    public void leave_withNullCar_throws() {
+        ParkingLot lot = new ParkingLot();
+        assertThrows(IllegalArgumentException.class, () -> lot.leave(LocalDateTime.now(), null));
+    }
+
+
+    @Test
+    public void multipleObservers_firstReturnsCharge_secondNotCalled() {
+        ParkingLot lot = new ParkingLot();
+        Car car = new Car();
+        car.setOwner(UUID.randomUUID());
+        car.setPermit("S");
+        car.setPermitExpiration(LocalDate.now().plusDays(1));
+
+        observers.ParkingAction first = (event) -> ParkingCharge.builder(car.getOwner(), UUID.randomUUID()).amount(new Money(900L)).build();
+        observers.ParkingAction second = (event) -> { throw new AssertionError("Second observer should not be called"); };
+
+        lot.addObserver(first);
+        lot.addObserver(second);
+
+        ParkingCharge charge = lot.notifyObservers(new ParkingEvent(EventType.ENTRY, LocalDateTime.now(), lot, car));
+        assertNotNull(charge);
+        assertEquals(900L, charge.getAmount().getCents());
+    }
+
+    @Test
+    public void leave_withObserverReturningCharge_returnsCharge() {
+        ParkingLot lot = new ParkingLot();
+        Car car = new Car();
+        car.setOwner(UUID.randomUUID());
+        car.setPermit("LC");
+        car.setPermitExpiration(LocalDate.now().plusDays(1));
+
+        observers.ParkingAction obs = (event) -> ParkingCharge.builder(car.getOwner(), UUID.randomUUID()).amount(new Money(1000L)).build();
+        lot.addObserver(obs);
+
+        ParkingCharge out = lot.leave(LocalDateTime.now(), car);
+        assertNotNull(out);
+        assertEquals(1000L, out.getAmount().getCents());
+    }
+
+    @Test
+    public void leave_withNullDate_andObserverReturningNull_removesCarLocally() {
+        ParkingLot lot = new ParkingLot();
+        Car car = new Car();
+        car.setOwner(UUID.randomUUID());
+        car.setPermit("NULLD");
+        car.setPermitExpiration(LocalDate.now().plusDays(1));
+
+        // ensure car is parked locally
+        lot.getParkedCars().add(car);
+
+        observers.ParkingAction noop = (event) -> null;
+        lot.addObserver(noop);
+
+        ParkingCharge out = lot.leave(null, car);
+        assertNull(out);
+        assertFalse(lot.getParkedCars().contains(car));
     }
 
 }

@@ -1,11 +1,11 @@
 package factories;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.time.Instant;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -113,6 +113,12 @@ class ParkingChargeStrategyFactoryTest {
 		StrategyType unknownType = Mockito.mock(StrategyType.class);
 		assertThrows(IllegalArgumentException.class,
 				() -> ParkingChargeStrategyFactory.createStrategy(unknownType, cfg));
+	}
+
+	@Test
+	void constructorIsAccessible() {
+		ParkingChargeStrategyFactory factory = new ParkingChargeStrategyFactory();
+		assertNotNull(factory);
 	}
 
 }

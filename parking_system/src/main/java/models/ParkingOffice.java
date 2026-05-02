@@ -9,6 +9,7 @@ import java.util.UUID;
 
 import managers.PermitManager;
 import managers.TransactionManager;
+import observers.ParkingObserver;
 
 public class ParkingOffice {
 
@@ -59,12 +60,9 @@ public class ParkingOffice {
 		return registeredCar;
 	}
 
-	public ParkingCharge park(LocalDateTime date, ParkingLot lot, Car car) {
-		Customer customer = getCustomer(car.getOwner());
-		if (customer == null) {
-			throw new IllegalArgumentException("Unknown car owner: " + car.getOwner());
-		}
-		return transactionManager.park(date, lot, car);
+	public ParkingCharge park(ParkingLot lot, Car car) {
+		// Use the lot's observable park method (notifies observers)
+		return lot.park(car);
 	}
 
 	public ParkingCharge leave(Instant exitTime, ParkingLot lot, Car car) {
@@ -151,7 +149,12 @@ public class ParkingOffice {
 	}
 
 	public void setLots(List<ParkingLot> lots) {
-		this.lots = lots;
+		this.lots = lots != null ? lots : new ArrayList<>();
+		if (this.transactionManager != null) {
+			for (ParkingLot lot : this.lots) {
+				lot.addObserver(ParkingObserver.createAndRegister(this, this.transactionManager));
+			}
+		}
 	}
 
 	@Override

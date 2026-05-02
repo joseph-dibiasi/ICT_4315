@@ -45,14 +45,6 @@ public class TransactionManager {
     }
 
     /**
-     * Register a TransactionManager instance as an observer for the provided lot.
-     * Registration of observers should be handled by the caller (for example
-     * the ParkingOffice or tests) to avoid TransactionManager exposing test
-     * helpers. If needed, create a ParkingObserver and register it on the
-     * appropriate lot(s) directly.
-     */
-
-    /**
      * Replace the strategies on the given ParkingLot with the provided list of
      * strategies created via the factory. StrategyDTO contains StrategyType
      * which dictates which factory is used to build the strategy.

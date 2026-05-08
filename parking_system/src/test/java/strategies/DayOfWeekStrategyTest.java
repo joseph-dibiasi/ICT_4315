@@ -8,7 +8,9 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 
-import factories.StrategyFactoryConfig;
+import decorators.BaseParkingChargeCalculator;
+import decorators.DayOfWeekDecorator;
+import factories.DecoratorFactoryConfig;
 import enums.CarType;
 import managers.TransactionManager;
 import models.Car;
@@ -26,18 +28,18 @@ class DayOfWeekStrategyTest {
         return StrategyTestHelper.createCar(type);
     }
 
-    private DayOfWeekStrategy defaultWeekendStrategy() {
-        StrategyFactoryConfig cfg = StrategyFactoryConfig.builder()
+    private DayOfWeekDecorator defaultWeekendDecorator() {
+        DecoratorFactoryConfig cfg = DecoratorFactoryConfig.builder()
                 .rateModifier(0.9)
                 .daysOfWeek(List.of(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY))
                 .build();
-        return new DayOfWeekStrategy(cfg);
+        return new DayOfWeekDecorator(new BaseParkingChargeCalculator(), cfg);
     }
 
     @Test
     void weekendDailyRateShouldApplyWeekendDiscount() {
-        DayOfWeekStrategy strat = defaultWeekendStrategy();
-        ParkingLot lot = StrategyTestHelper.createLot(false, 20.0, strat);
+        DayOfWeekDecorator decorator = defaultWeekendDecorator();
+        ParkingLot lot = StrategyTestHelper.createLot(false, 20.0, decorator);
         TransactionManager manager = new TransactionManager();
 
         Instant saturday = toInstant(2026, 4, 18, 10, 0);
@@ -48,8 +50,8 @@ class DayOfWeekStrategyTest {
 
     @Test
     void weekdayDailyRateShouldUseStandardRate() {
-        DayOfWeekStrategy strat = defaultWeekendStrategy();
-        ParkingLot lot = StrategyTestHelper.createLot(false, 20.0, strat);
+        DayOfWeekDecorator decorator = defaultWeekendDecorator();
+        ParkingLot lot = StrategyTestHelper.createLot(false, 20.0, decorator);
         TransactionManager manager = new TransactionManager();
 
         Instant monday = toInstant(2026, 4, 20, 10, 0);
@@ -60,8 +62,8 @@ class DayOfWeekStrategyTest {
 
     @Test
     void weekendHourlyRateShouldApplyWeekendDiscount() {
-        DayOfWeekStrategy strat = defaultWeekendStrategy();
-        ParkingLot lot = StrategyTestHelper.createLot(true, 2.0, strat);
+        DayOfWeekDecorator decorator = defaultWeekendDecorator();
+        ParkingLot lot = StrategyTestHelper.createLot(true, 2.0, decorator);
         TransactionManager manager = new TransactionManager();
 
         Instant saturdayEntry = toInstant(2026, 4, 18, 10, 0);
@@ -73,25 +75,26 @@ class DayOfWeekStrategyTest {
 
     @Test
     void accessorsShouldWork() {
-        StrategyFactoryConfig cfg = StrategyFactoryConfig.builder()
+        DecoratorFactoryConfig cfg = DecoratorFactoryConfig.builder()
                 .rateModifier(0.9)
                 .daysOfWeek(List.of(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY))
                 .build();
-        DayOfWeekStrategy s = new DayOfWeekStrategy(cfg);
+        DayOfWeekDecorator s = new DayOfWeekDecorator(new BaseParkingChargeCalculator(), cfg);
         s.setWeekendModifier(0.77);
         assertEquals(0.77, s.getWeekendModifier(), 0.0001);
     }
     
     @Test
     void TimeOfDayWithNullTimesReturnsUnchanged() {
-        StrategyFactoryConfig cfg = StrategyFactoryConfig.builder()
+        DecoratorFactoryConfig cfg = DecoratorFactoryConfig.builder()
                 .rateModifier(0.9)
                 .daysOfWeek(List.of(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY))
                 .build();
         
-        DayOfWeekStrategy s = new DayOfWeekStrategy(cfg);
+        DayOfWeekDecorator s = new DayOfWeekDecorator(new BaseParkingChargeCalculator(), cfg);
         Money m = new Money(77L);
-        Money out = s.adjustCharge(m, null, null, null, null);
+        ParkingLot lot = StrategyTestHelper.createLot(false, 0.77, s);
+        Money out = s.calculate(lot, null, null, null);
         assertEquals(77L, out.getCents());
     }
 }

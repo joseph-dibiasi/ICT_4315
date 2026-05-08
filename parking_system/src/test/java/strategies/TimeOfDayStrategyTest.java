@@ -9,7 +9,9 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 
-import factories.StrategyFactoryConfig;
+import decorators.BaseParkingChargeCalculator;
+import decorators.TimeOfDayDecorator;
+import factories.DecoratorFactoryConfig;
 import managers.TransactionManager;
 import models.Car;
 import models.Money;
@@ -26,20 +28,20 @@ class TimeOfDayStrategyTest {
         return StrategyTestHelper.createCar(null);
     }
 
-    private TimeOfDayStrategy defaultPeakStrategy() {
+    private TimeOfDayDecorator defaultPeakDecorator() {
         Instant start = LocalDateTime.of(1970,1,1,9,0).atZone(ZoneId.systemDefault()).toInstant();
         Instant end = LocalDateTime.of(1970,1,1,17,0).atZone(ZoneId.systemDefault()).toInstant();
-        StrategyFactoryConfig cfg = StrategyFactoryConfig.builder()
+        DecoratorFactoryConfig cfg = DecoratorFactoryConfig.builder()
                 .rateModifier(1.2)
                 .timeOfDayRange(new Instant[] { start, end })
                 .build();
-        return new TimeOfDayStrategy(cfg);
+        return new TimeOfDayDecorator(new BaseParkingChargeCalculator(), cfg);
     }
 
     @Test
     void peakHourlyShouldApplySurcharge() {
-        TimeOfDayStrategy strat = defaultPeakStrategy();
-        ParkingLot lot = StrategyTestHelper.createLot(true, 2.0, strat);
+        TimeOfDayDecorator decorator = defaultPeakDecorator();
+        ParkingLot lot = StrategyTestHelper.createLot(true, 2.0, decorator);
         TransactionManager manager = StrategyTestHelper.createManager();
 
         Instant entry = toInstant(2026, 4, 20, 10, 0);
@@ -51,8 +53,8 @@ class TimeOfDayStrategyTest {
 
     @Test
     void offPeakHourlyShouldUseBaseRate() {
-        TimeOfDayStrategy strat = defaultPeakStrategy();
-        ParkingLot lot = StrategyTestHelper.createLot(true, 2.0, strat);
+        TimeOfDayDecorator decorator = defaultPeakDecorator();
+        ParkingLot lot = StrategyTestHelper.createLot(true, 2.0, decorator);
         TransactionManager manager = StrategyTestHelper.createManager();
 
         Instant entry = toInstant(2026, 4, 20, 20, 0);
@@ -66,11 +68,11 @@ class TimeOfDayStrategyTest {
     void accessorsShouldWork() {
         Instant start = LocalDateTime.of(1970,1,1,9,0).atZone(ZoneId.systemDefault()).toInstant();
         Instant end = LocalDateTime.of(1970,1,1,17,0).atZone(ZoneId.systemDefault()).toInstant();
-        StrategyFactoryConfig cfg = StrategyFactoryConfig.builder()
+        DecoratorFactoryConfig cfg = DecoratorFactoryConfig.builder()
                 .rateModifier(1.2)
                 .timeOfDayRange(new Instant[] { start, end })
                 .build();
-        TimeOfDayStrategy s = new TimeOfDayStrategy(cfg);
+        TimeOfDayDecorator s = new TimeOfDayDecorator(new BaseParkingChargeCalculator(), cfg);
         s.setPeakSurcharge(3.14);
         assertEquals(3.14, s.getPeakSurcharge(), 0.0001);
     }
@@ -79,13 +81,13 @@ class TimeOfDayStrategyTest {
     void nullTimesReturnUnchanged() {
         Instant start = LocalDateTime.of(1970,1,1,9,0).atZone(ZoneId.systemDefault()).toInstant();
         Instant end = LocalDateTime.of(1970,1,1,17,0).atZone(ZoneId.systemDefault()).toInstant();
-        StrategyFactoryConfig cfg = StrategyFactoryConfig.builder()
+        DecoratorFactoryConfig cfg = DecoratorFactoryConfig.builder()
                 .rateModifier(1.2)
                 .timeOfDayRange(new Instant[] { start, end })
                 .build();
-        TimeOfDayStrategy s = new TimeOfDayStrategy(cfg);
-        Money m = new Money(123L);
-        Money out = s.adjustCharge(m, null, null, null, null);
+        TimeOfDayDecorator s = new TimeOfDayDecorator(new BaseParkingChargeCalculator(), cfg);
+        ParkingLot lot = StrategyTestHelper.createLot(false, 1.23, s);
+        Money out = s.calculate(lot, null, null, null);
         assertEquals(123L, out.getCents());
     }
 }

@@ -6,6 +6,8 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.UUID;
 
+import decorators.BaseParkingChargeCalculator;
+import decorators.ParkingChargeCalculator;
 import enums.CarType;
 import managers.TransactionManager;
 import models.Car;
@@ -26,13 +28,19 @@ public final class StrategyTestHelper {
         return new Car(UUID.randomUUID(), "PERMIT-" + UUID.randomUUID(), LocalDate.now().plusYears(1), "PLATE-" + UUID.randomUUID().toString().substring(0, 5), type);
     }
 
-    public static ParkingLot createLot(boolean chargeOnExit, double fee, ParkingStrategy... strategies) {
+    public static ParkingLot createLot(boolean chargeOnExit, double fee, ParkingChargeCalculator calculator) {
         ParkingLot lot = new ParkingLot();
         lot.setChargeOnExit(chargeOnExit);
         lot.setLotFee(new Money(fee));
-        for (ParkingStrategy strategy : strategies) {
-            lot.getStrategies().add(strategy);
-        }
+        lot.setChargeCalculator(calculator);
+        return lot;
+    }
+
+    public static ParkingLot createLot(boolean chargeOnExit, double fee) {
+        ParkingLot lot = new ParkingLot();
+        lot.setChargeOnExit(chargeOnExit);
+        lot.setLotFee(new Money(fee));
+        lot.setChargeCalculator(new BaseParkingChargeCalculator());
         return lot;
     }
 

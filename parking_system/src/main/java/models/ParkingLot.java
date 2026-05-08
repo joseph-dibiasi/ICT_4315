@@ -1,7 +1,6 @@
 package models;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -9,8 +8,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import decorators.BaseParkingChargeCalculator;
+import decorators.ParkingChargeCalculator;
 import models.ParkingEvent.EventType;
-import strategies.ParkingStrategy;
 
 public class ParkingLot {
 
@@ -28,8 +28,10 @@ public class ParkingLot {
 
     private Set<Car> parkedCars;
 
-    // Strategies are implemented as a list to allow maximum flexibility in how many are applied per lot. 
-    private List<ParkingStrategy> strategies;
+    /*
+     *  Instead of a list of strategies, a single charge calculator is used hiding the more complex calculation logic.
+     */
+    private ParkingChargeCalculator chargeCalculator;
 
     // Observers that wish to be notified of parking events for this lot
     private List<observers.ParkingAction> observers;
@@ -92,7 +94,7 @@ public class ParkingLot {
 
     @Override
     public int hashCode() {
-        return Objects.hash(address, capacity, chargeOnExit, lotFee, lotId, parkedCars, strategies);
+        return Objects.hash(address, capacity, chargeOnExit, lotFee, lotId, parkedCars);
     }
 
     @Override
@@ -109,19 +111,18 @@ public class ParkingLot {
         ParkingLot other = (ParkingLot) obj;
         return Objects.equals(address, other.address) && Objects.equals(capacity, other.capacity)
                 && Objects.equals(chargeOnExit, other.chargeOnExit) && Objects.equals(lotFee, other.lotFee)
-                && Objects.equals(lotId, other.lotId) && Objects.equals(parkedCars, other.parkedCars)
-                && Objects.equals(strategies, other.strategies);
+                && Objects.equals(lotId, other.lotId) && Objects.equals(parkedCars, other.parkedCars);
     }
 
-    public List<ParkingStrategy> getStrategies() {
-        if (strategies == null) {
-            strategies = new ArrayList<>();
+    public ParkingChargeCalculator getChargeCalculator() {
+        if (chargeCalculator == null) {
+            chargeCalculator = new BaseParkingChargeCalculator();
         }
-        return strategies;
+        return chargeCalculator;
     }
 
-    public void setStrategies(List<ParkingStrategy> strategies) {
-        this.strategies = strategies;
+    public void setChargeCalculator(ParkingChargeCalculator chargeCalculator) {
+        this.chargeCalculator = chargeCalculator;
     }
 
     public void addObserver(observers.ParkingAction observer) {

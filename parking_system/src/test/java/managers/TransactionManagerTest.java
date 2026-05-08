@@ -21,18 +21,20 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import decorators.BaseParkingChargeCalculator;
+import decorators.CarTypeDecorator;
+import decorators.DayOfWeekDecorator;
+import decorators.ParkingChargeCalculator;
 import dtos.ParkingStrategyDTO;
 import enums.CarType;
-import enums.StrategyType;
-import factories.StrategyFactoryConfig;
+import enums.DecoratorType;
+import factories.DecoratorFactoryConfig;
 import models.Address;
 import models.Car;
 import models.Customer;
 import models.Money;
 import models.ParkingCharge;
 import models.ParkingLot;
-import strategies.CarTypeStrategy;
-import strategies.DayOfWeekStrategy;
 import strategies.StrategyTestHelper;
 
 class TransactionManagerTest {
@@ -53,18 +55,18 @@ class TransactionManagerTest {
 		f.set(target, value);
 	}
 
-	private DayOfWeekStrategy defaultWeekendStrategy() {
-		StrategyFactoryConfig cfg = StrategyFactoryConfig.builder().rateModifier(0.9)
+	private DayOfWeekDecorator defaultWeekendDecorator(ParkingChargeCalculator wrappedCalculator) {
+		DecoratorFactoryConfig cfg = DecoratorFactoryConfig.builder().rateModifier(0.9)
 				.daysOfWeek(List.of(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY)).build();
-		return new DayOfWeekStrategy(cfg);
+		return new DayOfWeekDecorator(wrappedCalculator, cfg);
 	}
 	
-    private CarTypeStrategy defaultCompactStrategy() {
-        StrategyFactoryConfig cfg = StrategyFactoryConfig.builder()
+    private CarTypeDecorator defaultCompactDecorator(ParkingChargeCalculator wrappedCalculator) {
+        DecoratorFactoryConfig cfg = DecoratorFactoryConfig.builder()
                 .rateModifier(0.8)
                 .carTypes(java.util.List.of(CarType.COMPACT))
                 .build();
-        return new CarTypeStrategy(cfg);
+        return new CarTypeDecorator(wrappedCalculator, cfg);
     }
 
 	@Test
@@ -489,49 +491,10 @@ class TransactionManagerTest {
 	}
 
 	@Test
-	void testCalculateBaseChargeHourlyMinimumOneHour() {
-		TransactionManager local = new TransactionManager();
-		models.ParkingLot lot = new models.ParkingLot();
-		lot.setChargeOnExit(true);
-		lot.setLotFee(new Money(500L)); // $5/hour
-
-		Instant entry = Instant.now();
-		Instant exit = entry.plusSeconds(30 * 60); // 30 minutes later
-
-		Money m = local.calculateBaseCharge(lot, new models.Car(), entry, exit);
-		// should charge at least 1 hour
-		assertEquals(500L, m.getCents());
-	}
-
-	@Test
-	void testCalculateBaseChargeDailyWhenExitNullAndChargeOnExitTrue() {
-		TransactionManager local = new TransactionManager();
-		models.ParkingLot lot = new models.ParkingLot();
-		lot.setChargeOnExit(true);
-		lot.setLotFee(new Money(200L));
-
-		Money m = local.calculateBaseCharge(lot, new models.Car(), null, null);
-		// for hourly lots with null exitTime should return $0 initial
-		assertEquals(0L, m.getCents());
-	}
-
-	@Test
-	void testCalculateBaseChargeExitOnDailyLotReturnsLotFee() {
-		TransactionManager local = new TransactionManager();
-		models.ParkingLot lot = new models.ParkingLot();
-		lot.setChargeOnExit(false);
-		lot.setLotFee(new Money(250L));
-
-		Instant entry = Instant.now().minusSeconds(3600);
-		Instant exit = Instant.now();
-
-		Money m = local.calculateBaseCharge(lot, new models.Car(), entry, exit);
-		assertEquals(250L, m.getCents());
-	}
-
-	@Test
 	void testCalculateParkingChargeAppliesCombinedCarTypeAndDayOfWeekDiscounts() {
-		ParkingLot lot = StrategyTestHelper.createLot(false, 20.0, defaultCompactStrategy(), defaultWeekendStrategy());
+		ParkingChargeCalculator calculator = defaultWeekendDecorator(
+				defaultCompactDecorator(new BaseParkingChargeCalculator()));
+		ParkingLot lot = StrategyTestHelper.createLot(false, 20.0, calculator);
 		ParkingCharge charge = tm.calculateParkingCharge(lot, StrategyTestHelper.createCar(CarType.COMPACT),
 				StrategyTestHelper.toInstant(2026, 4, 18, 10, 0), null);
 
@@ -540,7 +503,9 @@ class TransactionManagerTest {
 
 	@Test
 	void testCalculateParkingChargeUsesBaseRateForSuvOnWeekday() {
-		ParkingLot lot = StrategyTestHelper.createLot(false, 20.0, defaultCompactStrategy(), defaultWeekendStrategy());
+		ParkingChargeCalculator calculator = defaultWeekendDecorator(
+				defaultCompactDecorator(new BaseParkingChargeCalculator()));
+		ParkingLot lot = StrategyTestHelper.createLot(false, 20.0, calculator);
 		ParkingCharge charge = tm.calculateParkingCharge(lot, StrategyTestHelper.createCar(CarType.SUV),
 				StrategyTestHelper.toInstant(2026, 4, 20, 10, 0), null);
 
@@ -549,7 +514,9 @@ class TransactionManagerTest {
 
 	@Test
 	void testCalculateParkingChargeAppliesOnlyCarTypeDiscountForCompactOnWeekday() {
-		ParkingLot lot = StrategyTestHelper.createLot(false, 20.0, defaultCompactStrategy(), defaultWeekendStrategy());
+		ParkingChargeCalculator calculator = defaultWeekendDecorator(
+				defaultCompactDecorator(new BaseParkingChargeCalculator()));
+		ParkingLot lot = StrategyTestHelper.createLot(false, 20.0, calculator);
 		ParkingCharge charge = tm.calculateParkingCharge(lot, StrategyTestHelper.createCar(CarType.COMPACT),
 				StrategyTestHelper.toInstant(2026, 4, 20, 10, 0), null);
 
@@ -557,39 +524,39 @@ class TransactionManagerTest {
 	}
 
 	@Test
-	void assignStrategiesThrowsWhenLotNull() {
+	void createParkingCalculatorThrowsWhenLotNull() {
 		List<ParkingStrategyDTO> dtos = new ArrayList<>();
-		RuntimeException ex = assertThrows(IllegalArgumentException.class, () -> tm.assignStrategies(null, dtos));
+		RuntimeException ex = assertThrows(IllegalArgumentException.class, () -> tm.createParkingCalculator(null, dtos));
 	}
 
 	@Test
-	void assignStrategiesClearsStrategiesWhenEmpty() {
+	void createParkingCalculatorResetsToBaseCalculatorWhenEmpty() {
 		ParkingLot lot = new ParkingLot();
 		lot.setLotId(UUID.randomUUID());
 		// add a dummy strategy list
-		lot.getStrategies().add(new DayOfWeekStrategy(StrategyFactoryConfig.builder().rateModifier(0.9)
-				.daysOfWeek(List.of(java.time.DayOfWeek.SATURDAY)).build()));
+		lot.setChargeCalculator(new DayOfWeekDecorator(new BaseParkingChargeCalculator(),
+				DecoratorFactoryConfig.builder().rateModifier(0.9)
+						.daysOfWeek(List.of(java.time.DayOfWeek.SATURDAY)).build()));
 
 		// empty list should clear
-		tm.assignStrategies(lot, new ArrayList<>());
-		assertTrue(lot.getStrategies().isEmpty());
+		tm.createParkingCalculator(lot, new ArrayList<>());
+		assertTrue(lot.getChargeCalculator() instanceof BaseParkingChargeCalculator);
 	}
 
 	@Test
-	void assignStrategiesCreatesStrategies() {
+	void createParkingCalculatorBuildsDecoratorChain() {
 		ParkingLot lot = new ParkingLot();
 		lot.setLotId(UUID.randomUUID());
 
-		StrategyFactoryConfig cfg = StrategyFactoryConfig.builder().daysOfWeek(List.of(java.time.DayOfWeek.SATURDAY))
+		DecoratorFactoryConfig cfg = DecoratorFactoryConfig.builder().daysOfWeek(List.of(java.time.DayOfWeek.SATURDAY))
 				.rateModifier(0.9).build();
 
 		ParkingStrategyDTO dto = new ParkingStrategyDTO();
-		dto.setStrategyType(StrategyType.DAY_OF_WEEK);
-		dto.setStrategyConfig(cfg);
+		dto.setDecoratorType(DecoratorType.DAY_OF_WEEK);
+		dto.setDecoratorConfig(cfg);
 
-		tm.assignStrategies(lot, List.of(dto));
-		assertEquals(1, lot.getStrategies().size());
-		assertTrue(lot.getStrategies().get(0) instanceof DayOfWeekStrategy);
+		tm.createParkingCalculator(lot, List.of(dto));
+		assertTrue(lot.getChargeCalculator() instanceof DayOfWeekDecorator);
 	}
 
 	private static Object getPrivateField(Object target, String fieldName) throws Exception {

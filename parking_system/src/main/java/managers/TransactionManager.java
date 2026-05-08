@@ -8,8 +8,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import decorators.BaseParkingChargeCalculator;
+import decorators.ParkingChargeCalculator;
 import dtos.ParkingStrategyDTO;
-import factories.ParkingChargeStrategyFactory;
+import factories.ParkingChargeCalculatorFactory;
 import models.Car;
 import models.Customer;
 import models.Money;
@@ -18,7 +20,6 @@ import models.ParkingCharge.ParkingChargeBuilder;
 import models.ParkingEvent;
 import models.ParkingEvent.EventType;
 import models.ParkingLot;
-import strategies.ParkingStrategy;
 
 /**
  * This is the class that manages all the parking transactions.
@@ -45,34 +46,16 @@ public class TransactionManager {
     }
 
     /**
-     * Replace the strategies on the given ParkingLot with the provided list of
-     * strategies created via the factory. StrategyDTO contains StrategyType
-     * which dictates which factory is used to build the strategy.
-     * StrategyConfig contains the information needed to configure the built
-     * strategy. At the moment, assigning lot strategies is done wholesale;
-     * assigning new strategies replaces all existing strategies. Passing in no
-     * strategies functions as a removal feature. As the project continues, this
-     * is an area targeted for enhancement. It may be desirable to
-     * add/remove/modify specific strategies without affecting the rest.
+     * Parking strategies are now handled by a parking calculator.
+     * The strategy list controls which decorators wrap
+     * the base calculator and in what order they are applied.
      */
-    public void assignStrategies(ParkingLot lot, List<ParkingStrategyDTO> strategyDTOs) {
+    public void createParkingCalculator(ParkingLot lot, List<ParkingStrategyDTO> strategyDTOs) {
         if (lot == null) {
             throw new IllegalArgumentException("ParkingLot cannot be null");
         }
 
-        if (lot.getStrategies() != null) {
-            // Clear existing strategies before assigning new ones.
-            lot.getStrategies().clear();
-        }
-
-        List<ParkingStrategy> newStrategies = new ArrayList<>();
-
-        for (ParkingStrategyDTO parkingStrategyDTO : strategyDTOs) {
-            newStrategies.add(ParkingChargeStrategyFactory.createStrategy(parkingStrategyDTO.getStrategyType(),
-                    parkingStrategyDTO.getStrategyConfig()));
-        }
-
-        lot.setStrategies(newStrategies);
+        lot.setChargeCalculator(ParkingChargeCalculatorFactory.createCalculator(strategyDTOs));
     }
 
     /*
@@ -147,41 +130,14 @@ public class TransactionManager {
     public ParkingCharge calculateParkingCharge(ParkingLot lot, Car car, Instant entryTime, Instant exitTime) {
         ParkingChargeBuilder parkingChargeBuilder = new ParkingChargeBuilder(car.getOwner(), lot.getLotId());
 
-        Money amount;
-        amount = calculateBaseCharge(lot, car, entryTime, exitTime);
-        for (ParkingStrategy adj : lot.getStrategies()) {
-            amount = adj.adjustCharge(amount, lot, car, entryTime, exitTime);
-        }
+        ParkingChargeCalculator calculator = lot.getChargeCalculator();
+        Money amount = calculator.calculate(lot, car, entryTime, exitTime);
 
         parkingChargeBuilder.amount(amount);
         if (exitTime != null) {
             parkingChargeBuilder.incurred(entryTime);
         }
         return parkingChargeBuilder.build();
-    }
-
-    ;
-
-	public Money calculateBaseCharge(ParkingLot parkingLot, Car car, Instant entryTime, Instant exitTime) {
-        if (exitTime == null) {
-            // Entry
-            if (parkingLot.getChargeOnExit()) {
-                return new Money(0L);
-            } else {
-                return parkingLot.getLotFee();
-            }
-        } else {
-            // Exit
-            if (parkingLot.getChargeOnExit()) {
-                long hours = ChronoUnit.HOURS.between(entryTime, exitTime);
-                if (hours < 1) {
-                    hours = 1;
-                }
-                return new Money(parkingLot.getLotFee().getDollars() * hours);
-            } else {
-                return parkingLot.getLotFee();
-            }
-        }
     }
 
     /*

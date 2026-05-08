@@ -9,14 +9,14 @@ import org.junit.jupiter.api.Test;
 
 import enums.CarType;
 
-class StrategyFactoryConfigTest {
+class DecoratorFactoryConfigTest {
 
     @Test
     void builderProducesExpectedConfig() {
         Instant start = Instant.now();
         Instant end = start.plusSeconds(3600);
 
-        StrategyFactoryConfig cfg = StrategyFactoryConfig.builder()
+        DecoratorFactoryConfig cfg = DecoratorFactoryConfig.builder()
                 .carTypes(List.of(CarType.COMPACT))
                 .daysOfWeek(List.of(java.time.DayOfWeek.MONDAY))
                 .specialDays(List.of(25))

@@ -8,7 +8,9 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import factories.StrategyFactoryConfig;
+import decorators.BaseParkingChargeCalculator;
+import decorators.SpecialDaysDecorator;
+import factories.DecoratorFactoryConfig;
 import enums.CarType;
 import managers.TransactionManager;
 import models.Car;
@@ -26,18 +28,18 @@ class SpecialDaysStrategyTest {
         return StrategyTestHelper.createCar(type);
     }
 
-    private SpecialDaysStrategy defaultSpecialDayStrategy() {
-        StrategyFactoryConfig cfg = StrategyFactoryConfig.builder()
+    private SpecialDaysDecorator defaultSpecialDayDecorator() {
+        DecoratorFactoryConfig cfg = DecoratorFactoryConfig.builder()
                 .rateModifier(0.8)
                 .specialDays(List.of(25))
                 .build();
-        return new SpecialDaysStrategy(cfg);
+        return new SpecialDaysDecorator(new BaseParkingChargeCalculator(), cfg);
     }
 
     @Test
     void specialDayDailyCompactShouldUseDiscount() {
-        SpecialDaysStrategy strat = defaultSpecialDayStrategy();
-        ParkingLot lot = StrategyTestHelper.createLot(false, 20.0, strat);
+        SpecialDaysDecorator decorator = defaultSpecialDayDecorator();
+        ParkingLot lot = StrategyTestHelper.createLot(false, 20.0, decorator);
         TransactionManager manager = new TransactionManager();
 
         Instant specialDay = toInstant(2026, 4, 25, 10, 0);
@@ -48,8 +50,8 @@ class SpecialDaysStrategyTest {
 
     @Test
     void normalDayDailyCompactShouldUseBaseCompactRate() {
-        SpecialDaysStrategy strat = defaultSpecialDayStrategy();
-        ParkingLot lot = StrategyTestHelper.createLot(false, 20.0, strat);
+        SpecialDaysDecorator decorator = defaultSpecialDayDecorator();
+        ParkingLot lot = StrategyTestHelper.createLot(false, 20.0, decorator);
         TransactionManager manager = new TransactionManager();
 
         Instant normalDay = toInstant(2026, 4, 18, 10, 0);
@@ -60,8 +62,8 @@ class SpecialDaysStrategyTest {
 
     @Test
     void specialDayHourlySuvShouldApplyDiscountedHourlyRate() {
-        SpecialDaysStrategy strat = defaultSpecialDayStrategy();
-        ParkingLot lot = StrategyTestHelper.createLot(true, 2.0, strat);
+        SpecialDaysDecorator decorator = defaultSpecialDayDecorator();
+        ParkingLot lot = StrategyTestHelper.createLot(true, 2.0, decorator);
         TransactionManager manager = new TransactionManager();
 
         Instant specialDay = toInstant(2026, 4, 25, 9, 0);
@@ -73,47 +75,47 @@ class SpecialDaysStrategyTest {
 
     @Test
     void accessorsShouldWork() {
-        StrategyFactoryConfig cfg = StrategyFactoryConfig.builder()
+        DecoratorFactoryConfig cfg = DecoratorFactoryConfig.builder()
                 .rateModifier(0.8)
                 .specialDays(List.of(25))
                 .build();
-        SpecialDaysStrategy s = new SpecialDaysStrategy(cfg);
+        SpecialDaysDecorator s = new SpecialDaysDecorator(new BaseParkingChargeCalculator(), cfg);
         s.setSpecialDiscount(0.5);
         assertEquals(0.5, s.getSpecialDiscount(), 0.0001);
     }
 
     @Test
     void specialDaysUsesExitTimeWhenEntryNull() {
-        StrategyFactoryConfig cfg = StrategyFactoryConfig.builder()
+        DecoratorFactoryConfig cfg = DecoratorFactoryConfig.builder()
                 .rateModifier(0.8)
                 .specialDays(List.of(25))
                 .build();
         Instant exit = toInstant(2026,4,25,12,0);
-        SpecialDaysStrategy s = new SpecialDaysStrategy(cfg);
-        Money m = new Money(100L);
-        Money out = s.adjustCharge(m, null, null, null, exit);
+        SpecialDaysDecorator s = new SpecialDaysDecorator(new BaseParkingChargeCalculator(), cfg);
+        ParkingLot lot = StrategyTestHelper.createLot(false, 1.0, s);
+        Money out = s.calculate(lot, null, null, exit);
         assertEquals(80L, out.getCents());
     }
 
     @Test
     void specialDaysWithEmptyListDoesNotModify() {
-        StrategyFactoryConfig cfg = StrategyFactoryConfig.builder().specialDays(List.of()).rateModifier(0.5).build();
-        SpecialDaysStrategy s = new SpecialDaysStrategy(cfg);
+        DecoratorFactoryConfig cfg = DecoratorFactoryConfig.builder().specialDays(List.of()).rateModifier(0.5).build();
+        SpecialDaysDecorator s = new SpecialDaysDecorator(new BaseParkingChargeCalculator(), cfg);
         Instant any = toInstant(2026,4,25,12,0);
-        Money m = new Money(100L);
-        Money out = s.adjustCharge(m, null, null, any, null);
+        ParkingLot lot = StrategyTestHelper.createLot(false, 1.0, s);
+        Money out = s.calculate(lot, null, any, null);
         assertEquals(100L, out.getCents());
     }
 
     @Test
     void specialDaysWithNullTimesReturnsUnchanged() {
-        StrategyFactoryConfig cfg = StrategyFactoryConfig.builder()
+        DecoratorFactoryConfig cfg = DecoratorFactoryConfig.builder()
                 .rateModifier(0.8)
                 .specialDays(List.of(25))
                 .build();
-        SpecialDaysStrategy s = new SpecialDaysStrategy(cfg);
-        Money m = new Money(77L);
-        Money out = s.adjustCharge(m, null, null, null, null);
+        SpecialDaysDecorator s = new SpecialDaysDecorator(new BaseParkingChargeCalculator(), cfg);
+        ParkingLot lot = StrategyTestHelper.createLot(false, 0.77, s);
+        Money out = s.calculate(lot, null, null, null);
         assertEquals(77L, out.getCents());
     }
 }

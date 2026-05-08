@@ -4,22 +4,22 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import org.junit.jupiter.api.Test;
 
-import enums.StrategyType;
-import factories.StrategyFactoryConfig;
+import enums.DecoratorType;
+import factories.DecoratorFactoryConfig;
 
 class ParkingStrategyDTOTest {
 
     @Test
     void accessorsWork() {
         ParkingStrategyDTO dto = new ParkingStrategyDTO();
-        assertNull(dto.getStrategyType());
+        assertNull(dto.getDecoratorType());
 
-        dto.setStrategyType(StrategyType.CAR_TYPE);
-        StrategyFactoryConfig cfg = StrategyFactoryConfig.builder().rateModifier(0.5).build();
-        dto.setStrategyConfig(cfg);
+        dto.setDecoratorType(DecoratorType.CAR_TYPE);
+        DecoratorFactoryConfig cfg = DecoratorFactoryConfig.builder().rateModifier(0.5).build();
+        dto.setDecoratorConfig(cfg);
 
-        assertEquals(StrategyType.CAR_TYPE, dto.getStrategyType());
-        assertEquals(0.5, dto.getStrategyConfig().getRateModifier());
+        assertEquals(DecoratorType.CAR_TYPE, dto.getDecoratorType());
+        assertEquals(0.5, dto.getDecoratorConfig().getRateModifier());
     }
 
 }

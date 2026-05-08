@@ -1,11 +1,8 @@
 package models;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -18,9 +15,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
-import factories.StrategyFactoryConfig;
+import decorators.BaseParkingChargeCalculator;
 import models.ParkingEvent.EventType;
-import strategies.DayOfWeekStrategy;
 
 class ParkingLotTest {
 
@@ -200,33 +196,9 @@ class ParkingLotTest {
     
 
     @Test
-    void parkingLotSetStrategiesAndEquals() {
-        ParkingLot p1 = new ParkingLot();
-        ParkingLot p2 = new ParkingLot();
-        p1.setLotId(UUID.randomUUID());
-        p2.setLotId(p1.getLotId());
-        p1.setCapacity(10);
-        p2.setCapacity(10);
-        p1.setChargeOnExit(false);
-        p2.setChargeOnExit(false);
-        p1.setLotFee(new Money(100L));
-        p2.setLotFee(new Money(100L));
-
-        assertTrue(p1.equals(p2));
-
-        List<strategies.ParkingStrategy> strategies = new ArrayList<>();
-        strategies.add(defaultWeekendStrategy());
-        p1.setStrategies(strategies);
-
-        assertFalse(p1.equals(p2));
-    }
-    
-    private DayOfWeekStrategy defaultWeekendStrategy() {
-        StrategyFactoryConfig cfg = StrategyFactoryConfig.builder()
-                .rateModifier(0.9)
-                .daysOfWeek(List.of(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY))
-                .build();
-        return new DayOfWeekStrategy(cfg);
+    void parkingLotDefaultsToBaseChargeCalculator() {
+        ParkingLot lot = new ParkingLot();
+        assertTrue(lot.getChargeCalculator() instanceof BaseParkingChargeCalculator);
     }
     
     @Test

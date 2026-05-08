@@ -1,31 +1,31 @@
 package dtos;
 
-import enums.StrategyType;
-import factories.StrategyFactoryConfig;
+import enums.DecoratorType;
+import factories.DecoratorFactoryConfig;
 
 /*
- * DTO for parking strategy configuration. This class encapsulates the strategy type and its associated configuration parameters.
+ * DTO for parking strategy configuration. This class encapsulates the decorator type and its associated configuration parameters.
  */
 public class ParkingStrategyDTO {
 	
-	StrategyType strategyType;
+	DecoratorType decoratorType;
 	
-	StrategyFactoryConfig strategyConfig;
+	DecoratorFactoryConfig decoratorConfig;
 
-	public StrategyType getStrategyType() {
-		return strategyType;
+	public DecoratorType getDecoratorType() {
+		return decoratorType;
 	}
 
-	public void setStrategyType(StrategyType strategyType) {
-		this.strategyType = strategyType;
+	public void setDecoratorType(DecoratorType decoratorType) {
+		this.decoratorType = decoratorType;
 	}
 
-	public StrategyFactoryConfig getStrategyConfig() {
-		return strategyConfig;
+	public DecoratorFactoryConfig getDecoratorConfig() {
+		return decoratorConfig;
 	}
 
-	public void setStrategyConfig(StrategyFactoryConfig strategyConfig) {
-		this.strategyConfig = strategyConfig;
+	public void setDecoratorConfig(DecoratorFactoryConfig decoratorConfig) {
+		this.decoratorConfig = decoratorConfig;
 	}
 
 }

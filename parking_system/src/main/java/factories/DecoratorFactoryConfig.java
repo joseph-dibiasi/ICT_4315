@@ -7,11 +7,11 @@ import java.util.List;
 import enums.CarType;
 
 /*
- * Config class used by the ParkingChargeStrategyFactory. Rate modifier is used
- * by all strategies, but the rest are checked individually at runtime for
- * validity only if the strategy requires it.
+ * Config class used by the ParkingChargeCalculatorFactory. Rate modifier is
+ * used by all pricing decorators, but the rest are checked individually at
+ * runtime for validity only if the decorator requires it.
  */
-public class StrategyFactoryConfig {
+public class DecoratorFactoryConfig {
 
 	private List<CarType> carTypes;
 	private List<DayOfWeek> daysOfWeek;
@@ -25,7 +25,7 @@ public class StrategyFactoryConfig {
 	private Double rateModifier;
 
 	// construct from builder
-	public StrategyFactoryConfig(StrategyFactoryConfigBuilder b) {
+	public DecoratorFactoryConfig(DecoratorFactoryConfigBuilder b) {
 		this.carTypes = b.carTypes;
 		this.daysOfWeek = b.daysOfWeek;
 		this.specialDays = b.specialDays;
@@ -53,48 +53,48 @@ public class StrategyFactoryConfig {
 		return rateModifier;
 	}
 
-	public static class StrategyFactoryConfigBuilder {
+	public static class DecoratorFactoryConfigBuilder {
 		private List<CarType> carTypes;
 		private List<DayOfWeek> daysOfWeek;
 		private List<Integer> specialDays;
 		private Instant[] timeOfDayRange;
 		private Double rateModifier;
 
-		public StrategyFactoryConfigBuilder() {
+		public DecoratorFactoryConfigBuilder() {
 		}
 
-		public StrategyFactoryConfigBuilder carTypes(List<CarType> carTypes) {
+		public DecoratorFactoryConfigBuilder carTypes(List<CarType> carTypes) {
 			this.carTypes = carTypes;
 			return this;
 		}
 
-		public StrategyFactoryConfigBuilder daysOfWeek(List<DayOfWeek> daysOfWeek) {
+		public DecoratorFactoryConfigBuilder daysOfWeek(List<DayOfWeek> daysOfWeek) {
 			this.daysOfWeek = daysOfWeek;
 			return this;
 		}
 
-		public StrategyFactoryConfigBuilder specialDays(List<Integer> specialDays) {
+		public DecoratorFactoryConfigBuilder specialDays(List<Integer> specialDays) {
 			this.specialDays = specialDays;
 			return this;
 		}
 
-		public StrategyFactoryConfigBuilder timeOfDayRange(Instant[] timeOfDay) {
+		public DecoratorFactoryConfigBuilder timeOfDayRange(Instant[] timeOfDay) {
 			this.timeOfDayRange = timeOfDay;
 			return this;
 		}
 
-		public StrategyFactoryConfigBuilder rateModifier(Double rateModifier) {
+		public DecoratorFactoryConfigBuilder rateModifier(Double rateModifier) {
 			this.rateModifier = rateModifier;
 			return this;
 		}
 
-		public StrategyFactoryConfig build() {
-			return new StrategyFactoryConfig(this);
+		public DecoratorFactoryConfig build() {
+			return new DecoratorFactoryConfig(this);
 		}
 	}
 
-	public static StrategyFactoryConfigBuilder builder() {
-		return new StrategyFactoryConfigBuilder();
+	public static DecoratorFactoryConfigBuilder builder() {
+		return new DecoratorFactoryConfigBuilder();
 	}
 
 }

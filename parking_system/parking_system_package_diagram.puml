@@ -1,0 +1,68 @@
+@startuml
+title parking-system package diagram
+left to right direction
+skinparam shadowing false
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam ranksep 90
+skinparam nodesep 60
+rectangle "services" as services
+rectangle "commands" as commands
+rectangle "managers" as managers
+rectangle "models" as models
+rectangle "decorators" as decorators
+rectangle "factories" as factories
+rectangle "dtos" as dtos
+rectangle "observers" as observers
+rectangle "enums" as enums
+together {
+  services
+  commands
+}
+together {
+  managers
+  models
+  observers
+}
+together {
+  decorators
+  factories
+  dtos
+  enums
+}
+' Real dependencies from src/main/java
+services --> commands
+services --> models
+commands --> models
+commands --> enums
+managers --> models
+managers --> decorators
+managers --> factories
+managers --> dtos
+decorators --> models
+decorators --> factories
+decorators --> enums
+factories --> decorators
+factories --> dtos
+factories --> enums
+dtos --> factories
+dtos --> enums
+observers --> models
+observers --> managers
+models --> managers
+models --> observers
+models --> decorators
+models --> enums
+' Layout hints to reduce crossing
+services -[hidden]down-> commands
+commands -[hidden]down-> managers
+observers -[hidden]left-> managers
+managers -[hidden]left-> models
+decorators -[hidden]right-> factories
+factories -[hidden]right-> dtos
+decorators -[hidden]down-> enums
+legend right
+Package-level dependencies only.
+This view omits classes to reduce routing noise.
+endlegend
+@enduml

@@ -1,0 +1,65 @@
+@startuml
+title parking-system package diagram
+
+left to right direction
+skinparam shadowing false
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam ranksep 90
+skinparam nodesep 60
+
+package "services" as services {}
+package "commands" as commands {}
+package "managers" as managers {}
+package "models" as models {}
+package "decorators" as decorators {}
+package "factories" as factories {}
+package "dtos" as dtos {}
+package "observers" as observers {}
+package "enums" as enums {}
+
+services --> commands
+services --> models
+
+commands --> models
+commands --> enums
+
+managers --> models
+managers --> decorators
+managers --> factories
+managers --> dtos
+
+observers --> models
+observers --> managers
+
+decorators --> models
+decorators --> factories
+decorators --> enums
+
+factories --> decorators
+factories --> dtos
+factories --> enums
+
+dtos --> factories
+dtos --> enums
+
+models --> managers
+models --> observers
+models --> decorators
+models --> enums
+
+services -[hidden]down-> commands
+commands -[hidden]down-> managers
+observers -[hidden]right-> managers
+managers -[hidden]right-> models
+models -[hidden]right-> decorators
+decorators -[hidden]right-> factories
+factories -[hidden]right-> dtos
+factories -[hidden]down-> enums
+
+legend right
+Package-level dependencies only.
+Layout hints use basic PlantUML syntax for compatibility.
+endlegend
+
+@enduml

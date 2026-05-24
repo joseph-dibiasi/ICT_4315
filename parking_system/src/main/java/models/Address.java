@@ -15,8 +15,8 @@ public class Address {
 	private String zipCode;
 
 	public String getAddressInfo() {
-		return getStreetAddress1() + " " + getStreetAddress2() + ", " + getCity() + ", " + getState() + " "
-				+ getZipCode();
+		return getStreetAddress1() + getStreetAddress2() + getCity() + ", " + getState() + " "
+			+ getZipCode();
 	}
 
 	public String getStreetAddress1() {
@@ -28,7 +28,10 @@ public class Address {
 	}
 
 	public String getStreetAddress2() {
-		return streetAddress2;
+		if (streetAddress2 == null) {
+			return ", ";
+		}
+		return " " + streetAddress2 + ", ";
 	}
 
 	public void setStreetAddress2(String streetAddress2) {

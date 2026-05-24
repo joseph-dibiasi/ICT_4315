@@ -23,7 +23,7 @@ class AddressTest {
     @Test
     void testStreetAddress2GetterAndSetter() {
         address.setStreetAddress2("Apt 4B");
-        assertEquals("Apt 4B", address.getStreetAddress2());
+        assertEquals(" Apt 4B, ", address.getStreetAddress2());
     }
 
     @Test
@@ -58,7 +58,7 @@ class AddressTest {
 
     @Test
     void testGetAddressInfo_EmptyFields() {
-        String expected = "null null, null, null null";
+        String expected = "null, null, null null";
         assertEquals(expected, address.getAddressInfo());
     }
 
@@ -69,7 +69,7 @@ class AddressTest {
         address.setZipCode("60601");
 
         // StreetAddress2, State are null
-        String expected = "456 Elm St null, Chicago, null 60601";
+        String expected = "456 Elm St, Chicago, null 60601";
         assertEquals(expected, address.getAddressInfo());
     }
 
@@ -215,6 +215,6 @@ class AddressTest {
     @Test
     void addressBuilderStreetAddress2() {
         Address a = Address.builder().streetAddress1("1 Main").streetAddress2("Apt 2").city("Town").state("ST").zipCode("12345").build();
-        assertEquals("Apt 2", a.getStreetAddress2());
+        assertEquals(" Apt 2, ", a.getStreetAddress2());
     }
 }

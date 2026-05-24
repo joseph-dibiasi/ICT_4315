@@ -3,6 +3,7 @@ package commands;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
@@ -12,29 +13,32 @@ import static org.mockito.Mockito.verify;
 
 import models.Address;
 import models.Address.AddressBuilder;
+import services.ParkingOffice;
 import models.Customer;
-import models.ParkingOffice;
 
 class RegisterCustomerCommandTest {
 
     private RegisterCustomerCommand command;
     private ParkingOffice mockParkingOffice;
-    private String[] validParams;
+    private java.util.Properties validParams;
     private Address testAddress;
 
     @BeforeEach
     void setUp() {
-        mockParkingOffice = mock(ParkingOffice.class);
+        mockParkingOffice = org.mockito.Mockito.spy(new ParkingOffice());
         command = new RegisterCustomerCommand(mockParkingOffice);
         AddressBuilder addressBuilder = new AddressBuilder();
         testAddress = addressBuilder.streetAddress1("123 Main St").city("Test City").state("TS").zipCode("12345").build();
         
-        validParams = new String[] {"John Doe", "123 Main St", "555-1234"};
+        validParams = new java.util.Properties();
+        validParams.setProperty("name", "John Doe");
+        validParams.setProperty("address", "123 Main St");
+        validParams.setProperty("phonenumber", "555-1234");
     }
 
     @Test
     void testGetCommandName() {
-        assertEquals("registerCustomer", command.getCommandName());
+        assertEquals("customer", command.getCommandName());
     }
 
     @Test
@@ -48,46 +52,91 @@ class RegisterCustomerCommandTest {
     }
 
     @Test
-    void testCheckParametersMissingName() {
-        String[] params = new String[] {"", "123 Main St", "555-1234"};
+    void testCheckParametersNullArray() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+            () -> command.checkParameters(null));
+        assertEquals("Missing required parameters", exception.getMessage());
+    }
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, 
+    @Test
+    void testCheckParametersTooShort() {
+        java.util.Properties params = new java.util.Properties();
+        params.setProperty("name", "John Doe");
+        params.setProperty("address", "123 Main St");
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+            () -> command.checkParameters(params));
+        assertEquals("Missing required parameters", exception.getMessage());
+    }
+
+    @Test
+    void testCheckParametersMissingName() {
+        java.util.Properties params = new java.util.Properties();
+        params.setProperty("name", "");
+        params.setProperty("address", "123 Main St");
+        params.setProperty("phonenumber", "555-1234");
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
             () -> command.checkParameters(params));
         assertEquals("Missing required parameter: name", exception.getMessage());
     }
 
     @Test
     void testCheckParametersBlankName() {
-        String[] params = new String[] {"", "123 Main St", "555-1234"};
+        java.util.Properties params = new java.util.Properties();
+        params.setProperty("name", "");
+        params.setProperty("address", "123 Main St");
+        params.setProperty("phonenumber", "555-1234");
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, 
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
             () -> command.checkParameters(params));
         assertEquals("Missing required parameter: name", exception.getMessage());
     }
 
     @Test
     void testCheckParametersMissingAddress() {
-        String[] params = new String[] {"John Doe", "", "555-1234"};
+        java.util.Properties params = new java.util.Properties();
+        params.setProperty("name", "John Doe");
+        params.setProperty("address", "");
+        params.setProperty("phonenumber", "555-1234");
         
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, 
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+            () -> command.checkParameters(params));
+        assertEquals("Missing required parameter: address", exception.getMessage());
+    }
+
+    @Test
+    void testCheckParametersBlankAddress() {
+        java.util.Properties params = new java.util.Properties();
+        params.setProperty("name", "John Doe");
+        params.setProperty("address", "");
+        params.setProperty("phonenumber", "555-1234");
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
             () -> command.checkParameters(params));
         assertEquals("Missing required parameter: address", exception.getMessage());
     }
 
     @Test
     void testCheckParametersMissingPhone() {
-        String[] params = new String[] {"John Doe", "123 Main St", ""};
+        java.util.Properties params = new java.util.Properties();
+        params.setProperty("name", "John Doe");
+        params.setProperty("address", "123 Main St");
+        params.setProperty("phonenumber", "");
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, 
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
             () -> command.checkParameters(params));
         assertEquals("Missing required parameter: phoneNumber", exception.getMessage());
     }
 
     @Test
     void testCheckParametersBlankPhone() {
-        String[] params = new String[] {"John Doe", "123 Main St", ""};
+        java.util.Properties params = new java.util.Properties();
+        params.setProperty("name", "John Doe");
+        params.setProperty("address", "123 Main St");
+        params.setProperty("phonenumber", "");
         
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, 
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
             () -> command.checkParameters(params));
         assertEquals("Missing required parameter: phoneNumber", exception.getMessage());
     }
@@ -96,7 +145,7 @@ class RegisterCustomerCommandTest {
     void testExecuteValidParameters() {
         String result = command.execute(validParams);
         
-        assertEquals("Customer registered successfully", result);
+        assertTrue(result.startsWith("Customer registered successfully"));
         
         // Verify that parkingOffice.register was called with a customer having the correct data
         verify(mockParkingOffice, times(1)).register(any(Customer.class));

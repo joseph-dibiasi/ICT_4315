@@ -1,11 +1,17 @@
 package commands;
 
+import java.util.Properties;
 import java.util.UUID;
 
 import enums.CarType;
 import models.Car;
-import models.ParkingOffice;
+import services.ParkingOffice;
 
+/*
+ * Command to register a new car for a customer.
+ * Required parameters: ownerid (UUID), license (String), cartype (SUV or COMPACT)
+ * Owner must already be registered in the system before registering a car.
+ */
 public class RegisterCarCommand implements Command {
     
     private ParkingOffice parkingOffice;
@@ -16,7 +22,7 @@ public class RegisterCarCommand implements Command {
 
     @Override
     public String getCommandName() {
-        return "registerCar";
+        return "car";
     }
 
     @Override
@@ -25,36 +31,37 @@ public class RegisterCarCommand implements Command {
     }
     
     @Override
-    public void checkParameters(String[] params) throws IllegalArgumentException {
-        if (params == null || params.length < 3) {
-            throw new IllegalArgumentException("Missing required parameter: ownerId, license, or carType");
+    public void checkParameters(Properties params) throws IllegalArgumentException {
+        if (params == null || params.size() < 2) {
+            throw new IllegalArgumentException("Missing required parameters");
         }
-        if (params[0] == null || params[0].isBlank()) {
-            throw new IllegalArgumentException("Missing required parameter: ownerId");
+        
+        if (parkingOffice.value(params, "ownerid").isBlank()) {
+        	throw new IllegalArgumentException("Missing required parameter: ownerid");
         }
-        if (params[1] == null || params[1].isBlank()) {
+        if (parkingOffice.value(params, "license").isBlank()) {
             throw new IllegalArgumentException("Missing required parameter: license");
         }
-        if (params[2] == null || params[2].isBlank()) {
-            throw new IllegalArgumentException("Missing required parameter: carType");
+        if (parkingOffice.value(params, "cartype").isBlank()) {
+            throw new IllegalArgumentException("Missing required parameter: cartype");
         }
     }
 
     @Override
-    public String execute(String[] params) {
+    public String execute(Properties params) {
         UUID ownerId;
         try {
-            ownerId = UUID.fromString(params[0]);
+            ownerId = UUID.fromString(parkingOffice.value(params, "ownerid"));
         } catch (Exception e) {
-            throw new IllegalArgumentException("Invalid ownerId format");
+            throw new IllegalArgumentException("Invalid ownerid format");
         }
 
-        String license = params[1];
+        String license = parkingOffice.value(params, "license");
         CarType carType;
         try {
-            carType = CarType.valueOf(params[2].toUpperCase());
+            carType = CarType.valueOf(parkingOffice.value(params, "cartype").toUpperCase());
         } catch (Exception e) {
-            throw new IllegalArgumentException("Invalid carType");
+            throw new IllegalArgumentException("Invalid Car Type. Valid types are SUV or COMPACT.");
         }
         
         Car car = new Car();
@@ -64,6 +71,10 @@ public class RegisterCarCommand implements Command {
         
         this.parkingOffice.register(car);
         
-        return "Car registered successfully";
-    }
+        StringBuilder sb = new StringBuilder();
+        sb.append("Car registered successfully:\n");
+        sb.append("Owner ID: ").append(car.getOwner()).append("\n");
+        sb.append("License: ").append(car.getLicense()).append("\n");
+        sb.append("Car Type: ").append(car.getType()).append("\n");
+        return sb.toString();    }
 }

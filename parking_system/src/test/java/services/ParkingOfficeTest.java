@@ -1,5 +1,5 @@
 // File: ICT_4305/Week_4/src/test/java/classes/ParkingOfficeTest.java
-package models;
+package services;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -26,6 +26,14 @@ import static org.mockito.Mockito.verify;
 import enums.CarType;
 import managers.PermitManager;
 import managers.TransactionManager;
+import models.Address;
+import models.Car;
+import models.Customer;
+import models.Money;
+import models.ParkingCharge;
+import models.ParkingEvent;
+import models.ParkingLot;
+import services.ParkingOffice;
 
 class ParkingOfficeTest {
 
@@ -93,13 +101,13 @@ class ParkingOfficeTest {
     }
 
     @Test
-    void testRegisterCustomerDelegatesButDoesNotAddToList() {
+    void testRegisterCustomerAddsToListAndReturnsStoredCustomer() {
         UUID cId = UUID.randomUUID();
         Customer c = Customer.builder(cId, "Alice").address(createTestAddress()).phoneNumber("555-1234").build();
 
-        // Current production implementation calls permitManager.register(...) but does not add to the office's customers list.
-        parkingOffice.register(c);
-        assertTrue(parkingOffice.getCustomers().isEmpty());
+        Customer registeredCustomer = parkingOffice.register(c);
+        assertEquals(1, parkingOffice.getCustomers().size());
+        assertEquals(registeredCustomer, parkingOffice.getCustomers().get(0));
     }
 
     @Test

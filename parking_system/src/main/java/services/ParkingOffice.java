@@ -1,14 +1,20 @@
-package models;
+package services;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.UUID;
 
 import managers.PermitManager;
 import managers.TransactionManager;
+import models.Address;
+import models.Car;
+import models.Customer;
+import models.ParkingCharge;
+import models.ParkingLot;
 import observers.ParkingObserver;
 
 public class ParkingOffice {
@@ -44,9 +50,18 @@ public class ParkingOffice {
 		this.permitManager = new PermitManager();
 		this.transactionManager = new TransactionManager();
 	}
+	
+	public String value(Properties properties, String key) {
+		return properties.getProperty(key, "").trim();
+	}
 
 	public Customer register(Customer customer) {
-		return permitManager.register(customer.getName(), customer.getAddress(), customer.getPhoneNumber());
+		Customer registeredCustomer = permitManager.register(customer.getName(), customer.getAddress(), customer.getPhoneNumber());
+		if (registeredCustomer.getCars() == null) {
+			registeredCustomer.setCars(new ArrayList<Car>());
+		}
+		this.customers.add(registeredCustomer);
+		return registeredCustomer;
 	}
 
 	public Car register(Car car) {

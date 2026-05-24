@@ -4,7 +4,7 @@ import managers.TransactionManager;
 import models.ParkingCharge;
 import models.ParkingEvent;
 import models.ParkingLot;
-import models.ParkingOffice;
+import services.ParkingOffice;
 
 /**
  * Observer for ParkingLot events. Delegates event handling to TransactionManager.

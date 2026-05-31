@@ -34,6 +34,7 @@ if ($clients -lt 0) {
     throw "Client count must be zero or greater."
 }
 
+$overallTimer = [System.Diagnostics.Stopwatch]::StartNew()
 $jobs = @()
 for ($i = 0; $i -lt $clients; $i++) {
     $jobs += Start-Job -ArgumentList $classpath, $i -ScriptBlock {
@@ -121,5 +122,7 @@ if ($summary.Succeeded -gt 0) {
     $average = [math]::Round($summary.TotalMs / $summary.Succeeded, 2)
     Write-Host "Average time per successful client: $average ms"
 }
+ $overallTimer.Stop()
+Write-Host "Total elapsed time: $([math]::Round($overallTimer.Elapsed.TotalMilliseconds, 2)) ms"
 Write-Host "Summary: $($summary.Succeeded)/$($summary.Total) succeeded, $($summary.Failed) failed."
 Write-Host "All clients finished."

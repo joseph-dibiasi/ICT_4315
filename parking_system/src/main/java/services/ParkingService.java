@@ -4,19 +4,26 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Properties;
+import java.util.logging.Logger;
 
 import commands.Command;
 import dtos.ParkingRequest;
 import dtos.ParkingResponse;
 
+/*
+ * ParkingService is the core service class that processes parking-related commands and manages the ParkingOffice.
+ * It maintains a registry of available commands and their implementations, allowing for dynamic command handling.
+ * The handleJsonInput method reads incoming JSON requests, parses them into ParkingRequest objects, and executes the corresponding commands.
+ * The performCommand method looks up the command by name, checks parameters, and executes it, returning a ParkingResponse with the result or error message.
+ * This design allows for easy extension by simply implementing new Command classes and registering them with the service.
+ */
 public class ParkingService {
 
 	private final ParkingOffice parkingOffice;
 
-	private static Map<String, Command> commandMap = new HashMap<>();
+	private final java.util.concurrent.ConcurrentMap<String, Command> commandMap = new java.util.concurrent.ConcurrentHashMap<>();
+	private static final Logger logger = Logger.getLogger(ParkingService.class.getName());
  
 	public ParkingService(ParkingOffice parkingOffice) {
 		this.parkingOffice = parkingOffice;
@@ -34,7 +41,12 @@ public class ParkingService {
 	}
 
 	public ParkingResponse handleJsonInput(InputStream inputStream) {
-		ParkingRequest request = ParkingRequest.fromJson(readAll(inputStream));
+		String raw = readAll(inputStream);
+		logger.info("Received request: " + (raw == null ? "<null>" : raw));
+		ParkingRequest request = ParkingRequest.fromJson(raw);
+		if (request == null) {
+			return new ParkingResponse(400, "Invalid or empty request");
+		}
 		return performCommand(request.getCommandName(), request.getProperties());
 	}
 

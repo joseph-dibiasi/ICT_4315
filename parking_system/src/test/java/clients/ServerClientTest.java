@@ -222,6 +222,56 @@ public class ServerClientTest {
         });
     }
 
+    @Test
+    void testRunCommandSendsRequestAndReadsResponse() throws Exception {
+        java.net.ServerSocket serverSocket;
+        try {
+            serverSocket = new java.net.ServerSocket(7777);
+        } catch (IOException ex) {
+            org.junit.jupiter.api.Assumptions.assumeTrue(false, "Port 7777 unavailable; skipping network test");
+            return;
+        }
+
+        final java.net.ServerSocket socket = serverSocket;
+        final java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+        final java.util.concurrent.atomic.AtomicReference<String> requestRef = new java.util.concurrent.atomic.AtomicReference<>();
+
+        Thread serverThread = new Thread(() -> {
+            try (java.net.ServerSocket ignored = socket; java.net.Socket conn = ignored.accept()) {
+                java.io.ByteArrayOutputStream requestBytes = new java.io.ByteArrayOutputStream();
+                java.io.InputStream in = conn.getInputStream();
+                byte[] buffer = new byte[256];
+                int read;
+                while ((read = in.read(buffer)) != -1) {
+                    requestBytes.write(buffer, 0, read);
+                }
+                requestRef.set(requestBytes.toString(java.nio.charset.StandardCharsets.UTF_8));
+                String response = "{\"statusCode\":200,\"message\":\"ok\"}";
+                conn.getOutputStream().write(response.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                conn.getOutputStream().flush();
+            } catch (IOException ignored) {
+            } finally {
+                done.countDown();
+            }
+        });
+        serverThread.setDaemon(true);
+        serverThread.start();
+
+        Properties properties = new Properties();
+        properties.setProperty("name", "NetUser");
+        properties.setProperty("phonenumber", "555-1234");
+
+        ParkingResponse response = ServerClient.runCommand("CUSTOMER", properties);
+
+        assertEquals(200, response.getStatusCode());
+        assertEquals("ok", response.getMessage());
+        assertTrue(requestRef.get().contains("\"commandName\":\"CUSTOMER\""));
+        assertTrue(requestRef.get().contains("\"name\":\"NetUser\""));
+        assertTrue(requestRef.get().contains("\"phonenumber\":\"555-1234\""));
+
+        done.await(2, java.util.concurrent.TimeUnit.SECONDS);
+    }
+
     private Process startServerProcess() throws Exception {
         Process process = new ProcessBuilder("java", "-cp", "target/classes", "server.Server")
                 .redirectErrorStream(true)
@@ -289,6 +339,52 @@ public class ServerClientTest {
         dtos.ParkingResponse response = ServerClient.runCommand("LIST", new java.util.Properties());
         assertEquals(200, response.getStatusCode());
         assertEquals("ok", response.getMessage());
+
+        done.await(2, java.util.concurrent.TimeUnit.SECONDS);
+    }
+
+    @org.junit.jupiter.api.Test
+    void testMainListAliasPrintsCommandAndResponse_network() throws Exception {
+        java.net.ServerSocket ss = null;
+        try {
+            ss = new java.net.ServerSocket(7777);
+        } catch (java.io.IOException e) {
+            org.junit.jupiter.api.Assumptions.assumeTrue(false, "Port 7777 unavailable; skipping network test");
+            return;
+        }
+
+        final java.net.ServerSocket serverSocket = ss;
+        final java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+
+        Thread serverThread = new Thread(() -> {
+            try (java.net.ServerSocket s = serverSocket; java.net.Socket conn = s.accept()) {
+                while (conn.getInputStream().read() != -1) {
+                }
+                String resp = "{\"statusCode\":200,\"message\":\"list ok\"}";
+                conn.getOutputStream().write(resp.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                conn.getOutputStream().flush();
+            } catch (java.io.IOException ex) {
+            } finally {
+                done.countDown();
+            }
+        });
+        serverThread.setDaemon(true);
+        serverThread.start();
+
+        org.junit.jupiter.api.Assumptions.assumeTrue(done.await(10, java.util.concurrent.TimeUnit.MILLISECONDS) || true);
+
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        java.io.PrintStream orig = System.out;
+        try {
+            System.setOut(new java.io.PrintStream(out));
+            ServerClient.main(new String[] { "LIST" });
+        } finally {
+            System.setOut(orig);
+        }
+
+        String printed = out.toString();
+        assertTrue(printed.contains("::: Command ::: LIST"));
+        assertTrue(printed.contains("list ok"));
 
         done.await(2, java.util.concurrent.TimeUnit.SECONDS);
     }

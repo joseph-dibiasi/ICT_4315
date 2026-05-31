@@ -17,6 +17,13 @@ import models.ParkingCharge;
 import models.ParkingLot;
 import observers.ParkingObserver;
 
+/*
+ * ParkingOffice is the central class that manages customers, parking lots, and parking transactions.
+ * It provides methods for registering customers and cars, processing parking events, and calculating fees.
+ * It uses PermitManager to handle customer and car registrations, and TransactionManager to handle parking transactions and fee calculations.
+ * ParkingOffice also implements the Observer pattern to receive updates from ParkingLot when cars are parked or leave.
+ * To handle multi-threaded access, methods that modify shared state (like customers and lots) are synchronized to ensure thread safety.
+ */
 public class ParkingOffice {
 
 	private String name;
@@ -55,7 +62,7 @@ public class ParkingOffice {
 		return properties.getProperty(key, "").trim();
 	}
 
-	public Customer register(Customer customer) {
+	public synchronized Customer register(Customer customer) {
 		Customer registeredCustomer = permitManager.register(customer.getName(), customer.getAddress(), customer.getPhoneNumber());
 		if (registeredCustomer.getCars() == null) {
 			registeredCustomer.setCars(new ArrayList<Car>());
@@ -64,7 +71,7 @@ public class ParkingOffice {
 		return registeredCustomer;
 	}
 
-	public Car register(Car car) {
+	public synchronized Car register(Car car) {
 		Customer customer = getCustomer(car.getOwner());
 		if (customer == null) {
 			throw new IllegalArgumentException("Unknown car owner: " + car.getOwner());
@@ -74,6 +81,8 @@ public class ParkingOffice {
 		customer.getCars().add(registeredCar);
 		return registeredCar;
 	}
+
+    
 
 	public ParkingCharge park(ParkingLot lot, Car car) {
 		// Use the lot's observable park method (notifies observers)
@@ -90,12 +99,16 @@ public class ParkingOffice {
 	}
 
 	public void updateDailyFees() {
-		transactionManager.updateDailyFees(lots);
+		synchronized (this) {
+			transactionManager.updateDailyFees(lots);
+		}
 	}
 
 	public void calculateCustomerMonthlyBill() {
-		for (Customer customer : this.customers) {
-			transactionManager.calculateCustomerMonthlyBill(customer);
+		synchronized (this) {
+			for (Customer customer : this.customers) {
+				transactionManager.calculateCustomerMonthlyBill(customer);
+			}
 		}
 	}
 
@@ -155,7 +168,7 @@ public class ParkingOffice {
 		return customers;
 	}
 
-	public void setCustomers(List<Customer> customers) {
+	public synchronized void setCustomers(List<Customer> customers) {
 		this.customers = customers;
 	}
 
@@ -163,7 +176,7 @@ public class ParkingOffice {
 		return lots;
 	}
 
-	public void setLots(List<ParkingLot> lots) {
+	public synchronized void setLots(List<ParkingLot> lots) {
 		this.lots = lots != null ? lots : new ArrayList<>();
 		if (this.transactionManager != null) {
 			for (ParkingLot lot : this.lots) {

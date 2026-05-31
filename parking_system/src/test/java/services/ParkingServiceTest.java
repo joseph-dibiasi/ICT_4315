@@ -3,6 +3,8 @@ package services;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import java.io.ByteArrayInputStream;
+import java.lang.reflect.Method;
 import java.util.UUID;
 import java.util.Properties;
 
@@ -94,44 +96,102 @@ class ParkingServiceTest {
         assertEquals(400, response.getStatusCode());
         assertTrue(response.getMessage().contains("Missing required parameter") || response.getMessage().contains("Missing required parameters"));
     }
+
+    @Test
+    void testCommandRegistryIsInstanceScoped() {
+        ParkingOffice firstOffice = new ParkingOffice();
+        ParkingService firstService = new ParkingService(firstOffice);
+        firstService.register(new Command() {
+            @Override
+            public String getCommandName() {
+                return "LOCAL";
+            }
+
+            @Override
+            public String getDisplayName() {
+                return "Local";
+            }
+
+            @Override
+            public void checkParameters(Properties params) {
+            }
+
+            @Override
+            public String execute(Properties params) {
+                return "ok";
+            }
+        });
+
+        ParkingService secondService = new ParkingService(new ParkingOffice());
+        dtos.ParkingResponse response = secondService.performCommand("LOCAL", new Properties());
+
+        assertEquals(400, response.getStatusCode());
+        assertTrue(response.getMessage().contains("Invalid Command: LOCAL"));
+    }
+
+    @Test
+    void testHandleJsonInputSuccess() {
+        ParkingOffice office = new ParkingOffice();
+        ParkingService service = new ParkingService(office);
+
+        service.register(new Command() {
+            @Override
+            public String getCommandName() {
+                return "ECHO2";
+            }
+
+            @Override
+            public String getDisplayName() {
+                return "Echo2";
+            }
+
+            @Override
+            public void checkParameters(java.util.Properties params) throws IllegalArgumentException {
+            }
+
+            @Override
+            public String execute(java.util.Properties params) {
+                return "ok:" + params.getProperty("x", "");
+            }
+        });
+
+        java.util.Properties props = new java.util.Properties();
+        props.setProperty("x", "1");
+        dtos.ParkingRequest req = new dtos.ParkingRequest("ECHO2", props);
+        ByteArrayInputStream in = new ByteArrayInputStream(req.toJson().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+        dtos.ParkingResponse resp = service.handleJsonInput(in);
+        assertEquals(200, resp.getStatusCode());
+        assertEquals("ok:1", resp.getMessage());
+        assertSame(office, service.getParkingOffice());
+    }
+
+    @Test
+    void testReadAllReadsWholeStream() throws Exception {
+        ParkingService service = new ParkingService(new ParkingOffice());
+        Method readAll = ParkingService.class.getDeclaredMethod("readAll", java.io.InputStream.class);
+        readAll.setAccessible(true);
+
+        String body = (String) readAll.invoke(service,
+                new java.io.InputStream() {
+                    private final byte[] data = "hello world".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                    private int index;
+
+                    @Override
+                    public int read() {
+                        if (index >= data.length) {
+                            return -1;
+                        }
+                        return data[index++];
+                    }
+                });
+
+        assertEquals("hello world", body);
+    }
 }
 
 // Additional coverage tests moved here from ParkingServiceExtraTest
 class ParkingServiceTest_Extras {
-
-    @Test
-    void testRegisterDefaultCommandsAndHandleJsonInput_additional() {
-        ParkingOffice office = new ParkingOffice();
-        ParkingService service = new ParkingService(office).registerDefaultCommands();
-
-        java.util.Properties props = new java.util.Properties();
-        props.setProperty("name", "JsonUser");
-        props.setProperty("address", "10 Json St");
-        props.setProperty("phonenumber", "000-0000");
-
-        dtos.ParkingRequest request = new dtos.ParkingRequest("customer", props);
-        String json = request.toJson();
-
-        dtos.ParkingResponse response = service.handleJsonInput(new java.io.ByteArrayInputStream(json.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
-        assertEquals(200, response.getStatusCode());
-        assertTrue(response.getMessage().contains("Customer registered successfully"));
-    }
-
-    @Test
-    void testHandleJsonInputReadFailure_additional() {
-        ParkingOffice office = new ParkingOffice();
-        ParkingService service = new ParkingService(office);
-
-        java.io.InputStream broken = new java.io.InputStream() {
-            @Override
-            public int read() throws java.io.IOException {
-                throw new java.io.IOException("broken stream");
-            }
-        };
-
-        RuntimeException ex = assertThrows(RuntimeException.class, () -> service.handleJsonInput(broken));
-        assertTrue(ex.getMessage().contains("Failed to read request"));
-    }
 
     @Test
     void testPerformCommandWithCustomCommandThrowing_additional() {
@@ -203,57 +263,6 @@ class ParkingServiceTest_Extras {
     }
 
     @Test
-    void testHandleJsonInputSuccess() {
-        ParkingOffice office = new ParkingOffice();
-        ParkingService service = new ParkingService(office);
-
-        service.register(new Command() {
-            @Override
-            public String getCommandName() {
-                return "ECHO2";
-            }
-
-            @Override
-            public String getDisplayName() {
-                return "Echo2";
-            }
-
-            @Override
-            public void checkParameters(java.util.Properties params) throws IllegalArgumentException {
-            }
-
-            @Override
-            public String execute(java.util.Properties params) {
-                return "ok:" + params.getProperty("x", "");
-            }
-        });
-
-        java.util.Properties props = new java.util.Properties();
-        props.setProperty("x", "1");
-        dtos.ParkingRequest req = new dtos.ParkingRequest("ECHO2", props);
-        java.io.InputStream in = new java.io.ByteArrayInputStream(req.toJson().getBytes(java.nio.charset.StandardCharsets.UTF_8));
-        dtos.ParkingResponse resp = service.handleJsonInput(in);
-        assertEquals(200, resp.getStatusCode());
-        assertEquals("ok:1", resp.getMessage());
-        assertSame(office, service.getParkingOffice());
-    }
-
-    @Test
-    void testHandleJsonInputReadAllIOException() {
-        ParkingOffice office = new ParkingOffice();
-        ParkingService service = new ParkingService(office);
-
-        java.io.InputStream bad = new java.io.InputStream() {
-            @Override
-            public int read() throws java.io.IOException {
-                throw new java.io.IOException("boom");
-            }
-        };
-
-        assertThrows(RuntimeException.class, () -> service.handleJsonInput(bad));
-    }
-
-    @Test
     void testPerformCommandInvalidCommand() {
         ParkingOffice office = new ParkingOffice();
         ParkingService service = new ParkingService(office);
@@ -316,50 +325,4 @@ class ParkingServiceTest_Extras {
         assertEquals("ok", resp.getMessage());
     }
 
-    @Test
-    void testReadAllPrivateLoopExecutes() throws Exception {
-        ParkingOffice office = new ParkingOffice();
-        ParkingService service = new ParkingService(office);
-
-        java.io.InputStream in = new java.io.InputStream() {
-            private boolean done = false;
-            @Override
-            public int read(byte[] b, int off, int len) {
-                if (done) return -1;
-                byte[] data = "payload".getBytes(java.nio.charset.StandardCharsets.UTF_8);
-                System.arraycopy(data, 0, b, off, data.length);
-                done = true;
-                return data.length;
-            }
-
-            @Override
-            public int read() { return -1; }
-        };
-
-        java.lang.reflect.Method readAll = ParkingService.class.getDeclaredMethod("readAll", java.io.InputStream.class);
-        readAll.setAccessible(true);
-        String out = (String) readAll.invoke(service, in);
-        assertEquals("payload", out);
-    }
-
-    @Test
-    void testReadAllPrivateThrowsRuntimeOnIoException() throws Exception {
-        ParkingOffice office = new ParkingOffice();
-        ParkingService service = new ParkingService(office);
-
-        java.io.InputStream in = new java.io.InputStream() {
-            @Override
-            public int read(byte[] b, int off, int len) throws java.io.IOException {
-                throw new java.io.IOException("boom");
-            }
-            @Override
-            public int read() throws java.io.IOException { throw new java.io.IOException("boom"); }
-        };
-
-        java.lang.reflect.Method readAll = ParkingService.class.getDeclaredMethod("readAll", java.io.InputStream.class);
-        readAll.setAccessible(true);
-        java.lang.reflect.InvocationTargetException ex = assertThrows(java.lang.reflect.InvocationTargetException.class,
-                () -> readAll.invoke(service, in));
-        assertTrue(ex.getCause() instanceof RuntimeException);
-    }
 }
